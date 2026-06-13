@@ -22,6 +22,7 @@ def extract_text_from_txt(file_path: Path) -> ExtractedDocument:
         title=file_path.stem,
         author=None,
         file_type="txt",
+        text=clean_text(text),
         page_count=None,
     )
 
