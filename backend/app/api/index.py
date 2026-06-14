@@ -53,7 +53,7 @@ async def index_document(document_id: str):
         embedding_dimension = len(first_embedding)
 
         collection_name = settings.default_collection 
-        ensure_collection(collection_name=collection_name, embedding_dimension=embedding_dimension)
+        ensure_collection(collection_name, embedding_dimension)
 
         points: list[PointStruct] = []
 
@@ -97,7 +97,7 @@ async def index_document(document_id: str):
             chunk_count=len(chunks),
             indexed_count=indexed_count,
             embedding_dimension=embedding_dimension,
-            elapsed_seconds=round(elapsed_seconds, 3)
+            elapsed_seconds=round(elapsed_seconds, 3),
             elapsed_ms=round(elapsed_seconds * 1000, 2)
         )
     except HTTPException:
@@ -108,7 +108,7 @@ async def index_document(document_id: str):
             detail=f"indexing failed: {error}"
         )
 
-@router.get("/collections/{collection_name}", response_model=CollectionInfoResponse):
+@router.get("/collections/{collection_name}", response_model=CollectionInfoResponse)
 def collection_info(collection_name: str):
     try:
         return CollectionInfoResponse(
