@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel 
-from qdrant_client.models import PointStruct 
+from qdrant_client.models import PointStruct
 
 from app.core.config import settings 
 from app.services.ollama import generate_embedding 
