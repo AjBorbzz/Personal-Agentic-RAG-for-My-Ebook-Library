@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.retrieval.rag_prompt import build_rag_prompt 
 from app.services.ollama import generate_embedding, generate_text 
 from app.services.qdrant_store import search_similar_chunks 
+from app.retrieval.source_quality import has_reasonable_sources
 
 router = APIRouter() 
 
@@ -61,6 +62,19 @@ async def rag_chat(request: RagChatRequest):
             return RagChatResponse(
                 question=request.question,
                 answer="No relevant ebook chunks were found in the vector database.",
+                collection_name=settings.default_collection,
+                source_count=0,
+                sources=[],
+                elapsed_seconds=round(elapsed_seconds, 3),
+                elapsed_ms=round(elapsed_seconds * 1000, 2),
+            )
+        
+        if not has_reasonable_sources(matches):
+            elapsed_seconds = time.perf_counter() - start_time 
+            return RagChatResponse(
+                question=request.question,
+                answer="The retrieved ebook sources are weak for this question."
+                       "Index more relevant books or ask a more specific question.",
                 collection_name=settings.default_collection,
                 source_count=0,
                 sources=[],
