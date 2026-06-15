@@ -15,6 +15,8 @@ from app.services.qdrant_store import (
     upsert_chunks
 )
 
+from app.services.domain_classifier import classify_domains
+
 router = APIRouter() 
 
 class IndexDocumentResponse(BaseModel):
@@ -22,6 +24,8 @@ class IndexDocumentResponse(BaseModel):
     collection_name: str 
     filename: str | None 
     title: str | None 
+    primary_domain: str
+    domains: list[str]
     chunk_count: int 
     indexed_count: int 
     embedding_dimension: int 
@@ -49,6 +53,20 @@ async def index_document(document_id: str):
                 status_code=422,
                 detail="Chunks file exists but contains no chunks."
             )
+        
+        classification_text = "\n".join(
+                        [
+                            payload.get("title") or "",
+                            payload.get("author") or "",
+                            payload.get("filename") or "",
+                            chunks[0].get("text", "")[:6000],
+                        ]
+                    )
+
+        classification = classify_domains(classification_text)
+
+        primary_domain = payload.get("primary_domain") or classification.primary_domain
+        domains = payload.get("domains") or classification.domains
         first_embedding = await generate_embedding(chunks[0]["text"])
         embedding_dimension = len(first_embedding)
 
@@ -68,17 +86,19 @@ async def index_document(document_id: str):
                 vector = await generate_embedding(chunk_text)
 
             point_payload = {
-                "document_id": document_id,
-                "filename": payload.get("filename"),
-                "title": payload.get("title"),
-                "author": payload.get("author"),
-                "file_type": payload.get("file_type"),
-                "chunk_index": chunk_index,
-                "page_number": chunk.get("page_number"),
-                "chunk_text": chunk_text,
-                "char_start": chunk.get("char_start"),
-                "char_end": chunk.get("char_end")
-            }
+                        "document_id": document_id,
+                        "filename": payload.get("filename"),
+                        "title": payload.get("title"),
+                        "author": payload.get("author"),
+                        "file_type": payload.get("file_type"),
+                        "primary_domain": primary_domain,
+                        "domains": domains,
+                        "chunk_index": chunk_index,
+                        "page_number": chunk.get("page_number"),
+                        "chunk_text": chunk_text,
+                        "char_start": chunk.get("char_start"),
+                        "char_end": chunk.get("char_end"),
+                    }
             points.append(
                 PointStruct(
                     id=make_point_id(document_id, chunk_index),
