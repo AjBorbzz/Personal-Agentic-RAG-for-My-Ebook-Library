@@ -10,21 +10,26 @@ def build_rag_prompt(question: str, matches: list[dict[str, Any]], max_context_c
 
     for index, match in enumerate(matches, start=1):
         payload = match.get("payload", {})
+        
         title = payload.get("title") or "Unknown title"
         author = payload.get("author") or "Unknown author"
-        filename= payload.get("filename") or "Unknown file"
+        filename = payload.get("filename") or "Unknown file"
+        primary_domain = payload.get("primary_domain") or "general"
+        domains = payload.get("domains") or ["general"]
         page_number = payload.get("page_number")
         chunk_index = payload.get("chunk_index")
         chunk_text = payload.get("chunk_text") or ""
 
         source_header = (
-            f"[Source {index}]\n"
-            f"Title: {title}\n"
-            f"Author: {author}\n"
-            f"File: {filename}\n"
-            f"Page: {page_number if page_number is not None else 'N/A'}\n"
-            f"Chunk: {chunk_index}\n"
-        )
+                f"[Source {index}]\n"
+                f"Title: {title}\n"
+                f"Author: {author}\n"
+                f"File: {filename}\n"
+                f"Primary Domain: {primary_domain}\n"
+                f"Domains: {', '.join(domains)}\n"
+                f"Page: {page_number if page_number is not None else 'N/A'}\n"
+                f"Chunk: {chunk_index}\n"
+            )
 
         block = f"{source_header}\nContent:\n{chunk_text}\n"
         if used_chars + len(block) > max_context_chars:
