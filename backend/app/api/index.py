@@ -74,6 +74,7 @@ async def index_document(document_id: str):
                 "author": payload.get("author"),
                 "file_type": payload.get("file_type"),
                 "chunk_index": chunk_index,
+                "page_number": chunk.get("page_number"),
                 "chunk_text": chunk_text,
                 "char_start": chunk.get("char_start"),
                 "char_end": chunk.get("char_end")

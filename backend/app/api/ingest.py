@@ -95,6 +95,7 @@ async def ingest_ebook(file: UploadFile = File(...)):
             "chunks": [
                 {
                     "chunk_index": chunk.chunk_index,
+                    "page_number": chunk.page_number,
                     "text": chunk.text,
                     "char_start": chunk.char_start,
                     "char_end": chunk.char_end,

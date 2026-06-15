@@ -23,6 +23,7 @@ class RagSource(BaseModel):
     title: str | None 
     author: str | None 
     file_type: str | None 
+    page_number: int | None
     chunk_index: int | None 
     chunk_preview: str | None 
 

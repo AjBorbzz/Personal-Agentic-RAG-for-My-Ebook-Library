@@ -20,6 +20,7 @@ class SemanticSearchResult(BaseModel):
     title: str | None 
     author: str | None 
     file_type: str | None 
+    page_number: int | None
     chunk_index: int | None 
     chunk_text: str | None 
 
@@ -55,6 +56,7 @@ async def semantic_search(request: SemanticSearchRequest):
                     title=payload.get("title"),
                     author=payload.get("author"),
                     file_type=payload.get("file_type"),
+                    page_number=payload.get("page_number"),
                     chunk_index=payload.get("chunk_index"),
                     chunk_text=payload.get("chunk_text"),
                 )

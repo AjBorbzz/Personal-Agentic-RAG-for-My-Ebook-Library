@@ -13,6 +13,7 @@ def build_rag_prompt(question: str, matches: list[dict[str, Any]], max_context_c
         title = payload.get("title") or "Unknown title"
         author = payload.get("author") or "Unknown author"
         filename= payload.get("filename") or "Unknown file"
+        page_number = payload.get("page_number")
         chunk_index = payload.get("chunk_index")
         chunk_text = payload.get("chunk_text") or ""
 
@@ -21,6 +22,7 @@ def build_rag_prompt(question: str, matches: list[dict[str, Any]], max_context_c
             f"Title: {title}\n"
             f"Author: {author}\n"
             f"File: {filename}\n"
+            f"Page: {page_number if page_number is not None else 'N/A'}\n"
             f"Chunk: {chunk_index}\n"
         )
 
