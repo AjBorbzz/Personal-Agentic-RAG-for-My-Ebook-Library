@@ -12,6 +12,8 @@ from app.core.config import settings
 from app.ingestion.chunker import chunk_text 
 from app.ingestion.parsers import extract_document 
 
+from app.services.domain_classifier import classify_domains
+
 router = APIRouter() 
 
 SUPPORTED_EXTENSIONS = {".pdf", ".epub", ".txt"}
@@ -26,6 +28,8 @@ class IngestResponse(BaseModel):
     page_count: int | None 
     text_characters: int 
     chunk_count: int 
+    primary_domain: str
+    domains: list[str]
     parsed_output_path: str 
     chunks_output_path: str 
     elapsed_seconds: float 
@@ -72,6 +76,17 @@ async def ingest_ebook(file: UploadFile = File(...)):
                 detail=("No readable text was extracted."
                         "This may be a scanned PDF or image-only ebook. OCR will be added"),
             )
+        classification_text = "\n".join(
+            [
+                extracted.title or "",
+                extracted.author or "",
+                extracted.file_type or "",
+                extracted.text[:6000],
+            ]
+        )
+
+        classification = classify_domains(classification_text)
+
         chunks = chunk_text(extracted.text)
 
         parsed_payload = {
@@ -83,6 +98,9 @@ async def ingest_ebook(file: UploadFile = File(...)):
             "title": extracted.title,
             "author": extracted.author,
             "page_count": extracted.page_count,
+            "primary_domain": classification.primary_domain,
+            "domains": classification.domains,
+            "domain_scores": classification.scores,
             "text": extracted.text,
         }
 
@@ -92,6 +110,9 @@ async def ingest_ebook(file: UploadFile = File(...)):
             "title": extracted.title,
             "author": extracted.author,
             "file_type": extracted.file_type,
+            "primary_domain": classification.primary_domain,
+            "domains": classification.domains,
+            "domain_scores": classification.scores,
             "chunks": [
                 {
                     "chunk_index": chunk.chunk_index,
@@ -119,21 +140,23 @@ async def ingest_ebook(file: UploadFile = File(...)):
         elapsed_seconds = time.perf_counter() - start_time
 
         return IngestResponse(
-            document_id=document_id,
-            filename=original_filename,
-            saved_path=str(upload_path),
-            file_type=extracted.file_type,
-            title=extracted.title,
-            author=extracted.author,
-            page_count=extracted.page_count,
-            text_characters=len(extracted.text),
-            chunk_count=len(chunks),
-            parsed_output_path=str(parsed_output_path),
-            chunks_output_path=str(chunks_output_path),
-            elapsed_seconds=round(elapsed_seconds, 3),
-            elapsed_ms=round(elapsed_seconds * 1000, 2)
-        )
-    
+                document_id=document_id,
+                filename=original_filename,
+                saved_path=str(upload_path),
+                file_type=extracted.file_type,
+                title=extracted.title,
+                author=extracted.author,
+                page_count=extracted.page_count,
+                primary_domain=classification.primary_domain,
+                domains=classification.domains,
+                text_characters=len(extracted.text),
+                chunk_count=len(chunks),
+                parsed_output_path=str(parsed_output_path),
+                chunks_output_path=str(chunks_output_path),
+                elapsed_seconds=round(elapsed_seconds, 3),
+                elapsed_ms=round(elapsed_seconds * 1000, 2),
+            )
+                
     except HTTPException:
         raise 
 
