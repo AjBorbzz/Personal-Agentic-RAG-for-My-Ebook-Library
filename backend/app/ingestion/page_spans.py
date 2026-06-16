@@ -7,6 +7,8 @@ class PageSpan:
     page_number: int
     start: int
     end: int
+    physical_page_number: int
+    printed_page_number: int | None = None
 
 
 def infer_page_number_from_markers(text: str, char_position: int) -> int | None:

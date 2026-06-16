@@ -157,17 +157,23 @@ def extract_pdf_with_page_markers(pdf_path: str | Path) -> tuple[str, list[PageS
         for page_index in range(len(doc)):
             pymupdf_page = doc.load_page(page_index)
 
-            visible_page_number = detect_visible_page_number_pymupdf(pymupdf_page)
+            physical_page_number = page_index + 1
+            printed_page_number = detect_visible_page_number_pymupdf(pymupdf_page)
 
-            if visible_page_number is None and plumber_pdf is not None:
-                visible_page_number = detect_visible_page_number_pdfplumber(
+            if printed_page_number is None and plumber_pdf is not None:
+                printed_page_number = detect_visible_page_number_pdfplumber(
                     plumber_pdf.pages[page_index]
                 )
 
-            page_number = visible_page_number or (page_index + 1)
+            page_number = physical_page_number
+            page_block = f"\n\n[PDF Page {physical_page_number}]"
+
+            if printed_page_number is not None:
+                page_block += f" [Printed Page {printed_page_number}]"
+
 
             page_text = extract_text_pymupdf(pymupdf_page)
-
+            
             if not page_text and plumber_pdf is not None:
                 page_text = extract_text_pdfplumber(plumber_pdf.pages[page_index])
 
@@ -176,7 +182,7 @@ def extract_pdf_with_page_markers(pdf_path: str | Path) -> tuple[str, list[PageS
 
             page_text = clean_text(page_text)
 
-            page_block = f"\n\n[Page {page_number}]\n{page_text}\n"
+            page_block += f"\n{page_text}\n"
 
             start = current_position
             end = current_position + len(page_block)
@@ -184,7 +190,9 @@ def extract_pdf_with_page_markers(pdf_path: str | Path) -> tuple[str, list[PageS
             full_text_parts.append(page_block)
             page_spans.append(
                 PageSpan(
-                    page_number=page_number,
+                    page_number=physical_page_number,
+                    physical_page_number=physical_page_number,
+                    printed_page_number=printed_page_number,
                     start=start,
                     end=end,
                 )

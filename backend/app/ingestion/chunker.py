@@ -16,7 +16,11 @@ class TextChunk:
     page_numbers: list[int] | None = None
 
 
-def infer_page_range_from_spans(page_spans, char_start: int, char_end: int) -> tuple[int | None, int | None, list[int]]:
+def infer_page_range_from_spans(
+    page_spans: list[PageSpan] | None,
+    char_start: int,
+    char_end: int,
+) -> tuple[int | None, int | None, list[int]]:
     if not page_spans:
         return None, None, []
 
