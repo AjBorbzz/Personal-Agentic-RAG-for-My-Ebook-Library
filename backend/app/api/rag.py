@@ -33,6 +33,9 @@ class RagSource(BaseModel):
     primary_domain: str | None
     domains: list[str] | None
     page_number: int | None
+    page_start: int | None
+    page_end: int | None
+    page_numbers: list[int] | None
     chunk_index: int | None
     chunk_preview: str | None
 
@@ -159,6 +162,9 @@ async def rag_chat(request: RagChatRequest):
                     primary_domain=payload.get("primary_domain"),
                     domains=payload.get("domains"),
                     page_number=payload.get("page_number"),
+                    page_start=payload.get("page_start"),
+                    page_end=payload.get("page_end"),
+                    page_numbers=payload.get("page_numbers"),
                     chunk_index=payload.get("chunk_index"),
                     chunk_preview=_preview_text(payload.get("chunk_text")),
                 )
