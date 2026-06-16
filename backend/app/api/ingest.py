@@ -87,7 +87,10 @@ async def ingest_ebook(file: UploadFile = File(...)):
 
         classification = classify_domains(classification_text)
 
-        chunks = chunk_text(extracted.text)
+        chunks = chunk_text(
+                    extracted.text,
+                    page_spans=extracted.page_spans,
+                )
 
         parsed_payload = {
             "document_id": document_id,
