@@ -198,4 +198,4 @@ def extract_pdf_with_page_markers(pdf_path: str | Path) -> tuple[str, list[PageS
         if plumber_pdf is not None:
             plumber_pdf.close()
 
-    return "".join(full_text_parts).strip(), page_spans
+    return "".join(full_text_parts), page_spans
