@@ -31,21 +31,34 @@ DOMAIN_LABELS = {
 
 
 def normalize_domain(domain: str) -> str:
-    normalized = domain.strip().lower().replace(" ", "_").replace("-", "_")
+    normalized = (
+        domain.strip()
+        .lower()
+        .replace(" ", "_")
+        .replace("-", "_")
+        .replace("/", "_")
+    )
 
     aliases = {
         "cloud": "cloud_computing",
+        "aws": "cloud_computing",
+        "azure": "cloud_computing",
+        "gcp": "cloud_computing",
+        "ai": "ai_ml",
         "ml": "ai_ml",
         "machine_learning": "ai_ml",
         "artificial_intelligence": "ai_ml",
         "security": "cybersecurity",
+        "cyber": "cybersecurity",
         "backend": "backend_development",
+        "api": "backend_development",
         "architecture": "system_architecture",
         "systems": "linux_systems",
         "linux": "linux_systems",
         "db": "databases",
         "database": "databases",
         "distributed": "distributed_systems",
+        "distributed_system": "distributed_systems",
     }
 
     normalized = aliases.get(normalized, normalized)
