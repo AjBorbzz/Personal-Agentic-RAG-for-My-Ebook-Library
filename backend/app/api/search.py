@@ -27,8 +27,10 @@ class SemanticSearchResult(BaseModel):
     title: str | None
     author: str | None
     file_type: str | None
+
     primary_domain: str | None
     domains: list[str] | None
+
     page_number: int | None
     page_start: int | None
     page_end: int | None
@@ -47,6 +49,7 @@ class SemanticSearchResponse(BaseModel):
     results: list[SemanticSearchResult]
     elapsed_seconds: float
     elapsed_ms: float
+    
 
 
 @router.post("/search", response_model=SemanticSearchResponse)
@@ -55,6 +58,7 @@ async def semantic_search(request: SemanticSearchRequest):
 
     try:
         query_vector = await generate_embedding(request.query)
+        detected_domains = classify_domains(request.query).domains
 
         if request.domains:
             search_domains = [
@@ -62,12 +66,9 @@ async def semantic_search(request: SemanticSearchRequest):
                 for domain in request.domains
             ]
         elif request.auto_detect_domains:
-            classification = classify_domains(request.query)
-            search_domains = classification.domains
+            search_domains = detected_domains
         else:
             search_domains = []
-
-        detected_domains = classify_domains(request.query).domains
 
         matches = search_similar_chunks(
             collection_name=settings.default_collection,
@@ -78,7 +79,6 @@ async def semantic_search(request: SemanticSearchRequest):
 
         domain_filter_used = bool(search_domains and search_domains != ["general"])
 
-        # Fallback: if domain-filtered search finds nothing, search the full collection.
         if not matches and domain_filter_used:
             matches = search_similar_chunks(
                 collection_name=settings.default_collection,
@@ -101,8 +101,10 @@ async def semantic_search(request: SemanticSearchRequest):
                     title=payload.get("title"),
                     author=payload.get("author"),
                     file_type=payload.get("file_type"),
+
                     primary_domain=payload.get("primary_domain"),
                     domains=payload.get("domains"),
+
                     page_number=payload.get("page_number"),
                     page_start=payload.get("page_start"),
                     page_end=payload.get("page_end"),
