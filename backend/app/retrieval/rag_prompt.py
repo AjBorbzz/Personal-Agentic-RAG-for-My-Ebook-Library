@@ -1,5 +1,20 @@
 from typing import Any 
 
+def _format_pages(payload: dict[str, Any]) -> str:
+    page_start = payload.get("page_start")
+    page_end = payload.get("page_end")
+    page_number = payload.get("page_number")
+
+    if page_start is not None and page_end is None:
+        if page_start == page_end:
+            return str(page_start)
+        return f"{page_start}-{page_end}"
+    
+    if page_number is not None:
+        return str(page_number)
+    
+    return "N/A"
+
 def build_rag_prompt(question: str, matches: list[dict[str, Any]], max_context_chars: int=12000) -> str:
     """
     Build a grounded RAG prompt using retrieved ebook chunks.

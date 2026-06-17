@@ -67,6 +67,7 @@ async def index_document(document_id: str):
 
         primary_domain = payload.get("primary_domain") or classification.primary_domain
         domains = payload.get("domains") or classification.domains
+        domain_scores = payload.get("domain_scores") or classification.scores
         first_embedding = await generate_embedding(chunks[0]["text"])
         embedding_dimension = len(first_embedding)
 
@@ -93,6 +94,7 @@ async def index_document(document_id: str):
                         "file_type": payload.get("file_type"),
                         "primary_domain": primary_domain,
                         "domains": domains,
+                        "domain_scores": domain_scores,
                         "chunk_index": chunk_index,
                         "page_number": chunk.get("page_number"),
                         "page_start": chunk.get("page_start"),
@@ -120,6 +122,8 @@ async def index_document(document_id: str):
             title=payload.get("title"),
             chunk_count=len(chunks),
             indexed_count=indexed_count,
+            primary_domain=primary_domain,
+            domains=domains,
             embedding_dimension=embedding_dimension,
             elapsed_seconds=round(elapsed_seconds, 3),
             elapsed_ms=round(elapsed_seconds * 1000, 2)
