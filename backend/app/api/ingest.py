@@ -101,6 +101,14 @@ async def ingest_ebook(file: UploadFile = File(...)):
             "title": extracted.title,
             "author": extracted.author,
             "page_count": extracted.page_count,
+            "page_spans": [
+                {
+                    "page_number": span.page_number,
+                    "start": span.start,
+                    "end": span.end,
+                }
+                for span in extracted.page_spans or []
+            ],
             "primary_domain": classification.primary_domain,
             "domains": classification.domains,
             "domain_scores": classification.scores,
