@@ -2,14 +2,13 @@ from app.services.ollama import generate_text
 
 
 def _fallback_rewrite(question: str) -> str:
-    """
-    Deterministic fallback.
-    Keeps the query stable if the LLM rewrite fails.
-    """
     return question.strip()
 
 
-async def rewrite_query_for_retrieval(question: str, domains: list[str]) -> str:
+async def rewrite_query_for_retrieval(
+    question: str,
+    domains: list[str],
+) -> str:
     domain_text = ", ".join(domains) if domains else "general"
 
     prompt = f"""
@@ -21,6 +20,7 @@ Rules:
 - Keep important technical terms.
 - Remove filler words.
 - Include domain hints if useful.
+- Maximum 40 words.
 
 Detected domains:
 {domain_text}
@@ -38,7 +38,6 @@ Rewritten search query:
         if not rewritten:
             return _fallback_rewrite(question)
 
-        # Prevent overly long rewrites.
         if len(rewritten) > 500:
             return _fallback_rewrite(question)
 

@@ -12,8 +12,16 @@ def _clean_domains(domains: list[str] | None) -> list[str]:
     if not domains:
         return []
 
-    cleaned = [normalize_domain(domain) for domain in domains]
-    cleaned = [domain for domain in cleaned if domain]
+    cleaned = [
+        normalize_domain(domain)
+        for domain in domains
+    ]
+
+    cleaned = [
+        domain
+        for domain in cleaned
+        if domain
+    ]
 
     return list(dict.fromkeys(cleaned))
 
@@ -23,10 +31,18 @@ def _should_use_domain_filter(domains: list[str]) -> bool:
 
 
 def _strategy_for_intent(intent: str) -> str:
-    if intent in {"architecture_design", "how_to_guide", "learning_path", "project_idea"}:
+    if intent in {
+        "architecture_design",
+        "how_to_guide",
+        "learning_path",
+        "project_idea",
+    }:
         return "multi_source_synthesis"
 
-    if intent in {"code_help", "troubleshooting"}:
+    if intent in {
+        "code_help",
+        "troubleshooting",
+    }:
         return "precise_retrieval"
 
     if intent == "comparison":
@@ -36,12 +52,12 @@ def _strategy_for_intent(intent: str) -> str:
 
 
 async def route_and_retrieve(
-    question: str,
-    collection_name: str,
-    limit: int,
-    manual_domains: list[str] | None = None,
-    auto_detect_domains: bool = True,
-) -> RouterDecision:
+                                question: str,
+                                collection_name: str,
+                                limit: int,
+                                manual_domains: list[str] | None = None,
+                                auto_detect_domains: bool = True,
+                            ) -> RouterDecision:
     intent_result = classify_intent(question)
     domain_result = classify_domains(question)
 
@@ -55,6 +71,7 @@ async def route_and_retrieve(
         search_domains = []
 
     retrieval_strategy = _strategy_for_intent(intent_result.intent)
+    domain_filter_used = _should_use_domain_filter(search_domains)
 
     decision = RouterDecision(
         question=question,
@@ -62,9 +79,7 @@ async def route_and_retrieve(
         detected_domains=detected_domains,
         search_domains=search_domains,
         retrieval_strategy=retrieval_strategy,
-        should_rewrite_query=False,
-        domain_filter_used=_should_use_domain_filter(search_domains),
-        retrieval_attempts=0,
+        domain_filter_used=domain_filter_used,
     )
 
     query_vector = await generate_embedding(question)
@@ -129,5 +144,4 @@ async def route_and_retrieve(
             return decision
 
     decision.notes.append("No strong retrieval result found.")
-
     return decision
