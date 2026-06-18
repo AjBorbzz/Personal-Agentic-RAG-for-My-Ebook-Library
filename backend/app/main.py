@@ -10,10 +10,11 @@ from app.api.learning_path import router as learning_path_router
 from app.api.rag import router as rag_router
 from app.api.router_preview import router as router_preview_router
 from app.api.search import router as search_router
+from app.api.project_generator import router as project_generator_router
 
 app = FastAPI(
     title="Personal Agentic RAG",
-    version="0.7.0",
+    version="0.8.0",
 )
 
 app.include_router(health_router, tags=["health"])
@@ -26,3 +27,4 @@ app.include_router(domains_router, tags=["domains"])
 app.include_router(router_preview_router, tags=["router-preview"])
 app.include_router(agentic_rag_router, tags=["agentic-rag"])
 app.include_router(learning_path_router, tags=["learning-path"])
+app.include_router(project_generator_router, tags=["project-generator"])
