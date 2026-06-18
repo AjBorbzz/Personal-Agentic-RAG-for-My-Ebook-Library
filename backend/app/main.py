@@ -6,14 +6,14 @@ from app.api.domains import router as domains_router
 from app.api.health import router as health_router
 from app.api.ingest import router as ingest_router
 from app.api.index import router as index_router
+from app.api.learning_path import router as learning_path_router
 from app.api.rag import router as rag_router
-from app.api.search import router as search_router
 from app.api.router_preview import router as router_preview_router
-
+from app.api.search import router as search_router
 
 app = FastAPI(
     title="Personal Agentic RAG",
-    version="0.6.0",
+    version="0.7.0",
 )
 
 app.include_router(health_router, tags=["health"])
@@ -23,5 +23,6 @@ app.include_router(index_router, tags=["indexing"])
 app.include_router(search_router, tags=["search"])
 app.include_router(rag_router, tags=["rag"])
 app.include_router(domains_router, tags=["domains"])
-app.include_router(agentic_rag_router, tags=["agentic-rag"])
 app.include_router(router_preview_router, tags=["router-preview"])
+app.include_router(agentic_rag_router, tags=["agentic-rag"])
+app.include_router(learning_path_router, tags=["learning-path"])
