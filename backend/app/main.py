@@ -8,6 +8,8 @@ from app.api.ingest import router as ingest_router
 from app.api.index import router as index_router
 from app.api.rag import router as rag_router
 from app.api.search import router as search_router
+from app.api.router_preview import router as router_preview_router
+
 
 app = FastAPI(
     title="Personal Agentic RAG",
@@ -22,3 +24,4 @@ app.include_router(search_router, tags=["search"])
 app.include_router(rag_router, tags=["rag"])
 app.include_router(domains_router, tags=["domains"])
 app.include_router(agentic_rag_router, tags=["agentic-rag"])
+app.include_router(router_preview_router, tags=["router-preview"])

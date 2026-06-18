@@ -34,7 +34,7 @@ INTENT_KEYWORDS: dict[str, list[str]] = {
     ],
     "troubleshooting": [
         "not working", "failed", "error", "issue", "connection refused",
-        "null", "bug", "fix", "debug", "why is",
+        "null", "bug", "fix", "debug", "why is", "inaccurate",
     ],
     "learning_path": [
         "roadmap", "learning path", "study plan", "curriculum",
@@ -42,7 +42,7 @@ INTENT_KEYWORDS: dict[str, list[str]] = {
     ],
     "project_idea": [
         "project", "portfolio", "build project", "project idea",
-        "github", "resume", "case study",
+        "github", "resume", "case study", "proof of work",
     ],
 }
 
