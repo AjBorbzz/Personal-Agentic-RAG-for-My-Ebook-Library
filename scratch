@@ -1,0 +1,30 @@
+curl -X POST http://localhost:8000/index/f3dc805f-7ccf-4e9a-80d7-93c763b0b9d7
+
+
+curl -X POST http://localhost:6333/collections/ebooks_general/points/scroll \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filter": {
+      "must": [
+        {
+          "key": "document_id",
+          "match": {
+            "value": "f3dc805f-7ccf-4e9a-80d7-93c763b0b9d7"
+          }
+        }
+      ]
+    },
+    "limit": 3,
+    "with_payload": true,
+    "with_vector": false
+  }' | jq '.result.points[].payload | {
+    document_id,
+    filename,
+    chunk_index,
+    page_number,
+    page_start,
+    page_end,
+    page_numbers,
+    primary_domain,
+    domains
+  }'
