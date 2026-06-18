@@ -18,15 +18,17 @@ def _format_pages(payload: dict[str, Any]) -> str:
     return "N/A"
 
 
-def build_agentic_rag_prompt(
-    question: str,
+def build_learning_path_prompt(
+    goal: str,
     matches: list[dict[str, Any]],
-    intent: str,
-    retrieval_strategy: str,
+    duration_weeks: int,
+    hours_per_week: int,
+    current_level: str,
+    target_level: str,
     detected_domains: list[str],
     search_domains: list[str],
     rewritten_query: str | None = None,
-    max_context_chars: int = 14000,
+    max_context_chars: int = 16000,
 ) -> str:
     context_blocks: list[str] = []
     used_chars = 0
@@ -74,32 +76,68 @@ def build_agentic_rag_prompt(
         rewrite_section = f"\nRewritten retrieval query:\n{rewritten_query}\n"
 
     return f"""
-You are a technical assistant answering questions using the user's private ebook library.
+You are a senior technical mentor creating a source-backed learning path from the user's private ebook library.
 
-Routing metadata:
-- Intent: {intent}
-- Retrieval strategy: {retrieval_strategy}
+User goal:
+{goal}
+
+Planning constraints:
+- Duration: {duration_weeks} weeks
+- Available study/build time: {hours_per_week} hours per week
+- Current level: {current_level}
+- Target level: {target_level}
 - Detected domains: {", ".join(detected_domains)}
 - Search domains: {", ".join(search_domains) if search_domains else "all"}
 {rewrite_section}
 
 Rules:
 1. Use only the provided ebook sources.
-2. If the sources are insufficient, say exactly: "The provided ebook sources do not contain enough information to answer this fully."
-3. Do not invent book titles, authors, citations, facts, or page numbers.
-4. Cite sources inline using [Source 1], [Source 2], etc.
-5. Prefer practical engineering explanations.
-6. Use PDF page ranges and chunk metadata when referring to sources.
-7. If intent is architecture_design, structure around components, tradeoffs, risks, and implementation steps.
-8. If intent is how_to_guide, structure as clear steps.
-9. If intent is comparison, compare using a compact table when useful.
-10. If intent is troubleshooting, prioritize likely causes and fixes.
-
-User question:
-{question}
+2. Do not invent book titles, authors, citations, page numbers, or chapters.
+3. Cite sources inline using [Source 1], [Source 2], etc.
+4. If the sources are insufficient, say which parts are not well supported.
+5. Make the plan practical and implementation-driven.
+6. Every week must produce a visible artifact.
+7. Favor projects, code, architecture diagrams, documentation, and tests over passive reading.
+8. Use PDF page ranges and chunk metadata when referring to sources.
 
 Retrieved ebook sources:
 {context}
 
-Answer:
+Return the learning path in this structure:
+
+# Learning Path Title
+
+## 1. Goal Interpretation
+Explain what the user is trying to become or build.
+
+## 2. Detected Domains
+List the technical domains involved.
+
+## 3. Skill Roadmap
+Group the skills into:
+- Foundation
+- Intermediate
+- Advanced
+- Portfolio Proof
+
+## 4. Weekly Plan
+For each week, include:
+- Theme
+- Concepts
+- Ebook-backed sources
+- Hands-on task
+- Output artifact
+- Success criteria
+
+## 5. Mini-Projects
+List 3 to 5 mini-projects that reinforce the path.
+
+## 6. Portfolio Artifact Plan
+List what should be published or documented.
+
+## 7. Quiz and Review Questions
+Create scenario-based questions.
+
+## 8. Gaps and Missing Sources
+State what is weakly covered by the retrieved sources.
 """.strip()
