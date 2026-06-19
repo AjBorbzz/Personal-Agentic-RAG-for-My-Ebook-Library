@@ -9,7 +9,14 @@ async def generate_text(prompt: str) -> str:
         "stream": False,
     }
 
-    async with httpx.AsyncClient(timeout=120) as client:
+    timeout = httpx.Timeout(
+        connect=10.0,
+        read=1800.0,
+        write=120.0,
+        pool=10.0,
+    )
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(
             f"{settings.ollama_url}/api/generate",
             json=payload,

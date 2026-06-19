@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.retrieval.project_generator_prompt import build_project_generator_prompt
 from app.services.ollama import generate_text
 
+import traceback
+
 router = APIRouter()
 
 
@@ -192,7 +194,8 @@ async def generate_project(request: ProjectGeneratorRequest):
         )
 
     except Exception as error:
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail=f"Project generation failed: {error}",
+            detail=f"Project generation failed: {type(error).__name__}: {error}",
         )
