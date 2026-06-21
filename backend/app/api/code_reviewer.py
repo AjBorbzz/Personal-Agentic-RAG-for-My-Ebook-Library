@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.retrieval.code_review_prompt import build_code_review_prompt
 from app.services.ollama import generate_text
 
+import traceback
+
 router = APIRouter()
 
 
@@ -208,7 +210,8 @@ async def review_code(request: CodeReviewRequest):
         )
 
     except Exception as error:
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail=f"Code review failed: {error}",
+            detail=f"Code review failed: {type(error).__name__}: {error}",
         )
