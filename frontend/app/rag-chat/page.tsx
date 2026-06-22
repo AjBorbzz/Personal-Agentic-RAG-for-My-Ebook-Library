@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { apiPost } from "@/lib/api";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 type RagSource = {
   source_number: number;
@@ -208,9 +209,9 @@ export default function RagChatPage() {
               </div>
 
               <h2 className="text-xl font-semibold">Answer</h2>
-              <div className="mt-4 whitespace-pre-wrap leading-7 text-neutral-200">
-                {result.answer}
-              </div>
+              <div className="mt-4">
+                <MarkdownContent content={result.answer} />
+                </div>
             </section>
 
             <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
