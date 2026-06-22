@@ -37,3 +37,24 @@ export async function apiPost<TResponse, TBody>(
 
   return response.json();
 }
+
+
+export async function apiUpload<TResponse>(
+  path: string,
+  file: File
+): Promise<TResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      body: formData,
+    });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`UPLOAD ${path} failed: ${response.status} ${errorText}`);
+  }
+
+  return response.json();
+}

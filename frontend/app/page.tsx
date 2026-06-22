@@ -36,6 +36,11 @@ const tools = [
   description: "Check if the frontend can connect to FastAPI.",
   href: "/health",
 },
+  {
+  title: "Ingest and Index",
+  description: "Upload ebooks and index them into Qdrant.",
+  href: "/ingest",
+},
 ];
 
 export default function Home() {
