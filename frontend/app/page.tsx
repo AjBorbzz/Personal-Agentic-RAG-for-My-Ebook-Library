@@ -41,6 +41,11 @@ const tools = [
   description: "Upload ebooks and index them into Qdrant.",
   href: "/ingest",
 },
+  {
+  title: "Semantic Search",
+  description: "Inspect retrieved chunks directly from Qdrant.",
+  href: "/search",
+},
 ];
 
 export default function Home() {
