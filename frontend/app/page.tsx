@@ -31,6 +31,11 @@ const tools = [
     description: "Review pasted code using your ebook-backed knowledge base.",
     href: "/code-review",
   },
+  {
+  title: "Backend Health",
+  description: "Check if the frontend can connect to FastAPI.",
+  href: "/health",
+},
 ];
 
 export default function Home() {
