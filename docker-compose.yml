@@ -16,7 +16,7 @@ services:
       POSTGRES_PASSWORD: rag
       POSTGRES_DB: ebook_rag
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
 
