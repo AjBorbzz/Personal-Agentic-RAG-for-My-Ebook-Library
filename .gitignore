@@ -12,6 +12,7 @@ ENV/
 dist/
 build/
 
+
 # FastAPI / local backend
 *.log
 logs/
@@ -56,6 +57,7 @@ data/postgres/
 data/redis/
 data/uploads/
 data/tmp/
+data/
 
 # Local vector/db storage
 qdrant_storage/
