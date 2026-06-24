@@ -1,0 +1,17 @@
+Django 5 Authentication and Middleware Notes
+
+Django is a Python web framework used for building secure web applications.
+
+In modern Django versions, authentication is handled through the built-in authentication system, middleware, sessions, password hashers, and permission classes.
+
+A secure Django application should use:
+- strong password hashing
+- CSRF protection
+- secure session cookies
+- HTTPS
+- authentication middleware
+- proper user permission checks
+
+Middleware is configured in the MIDDLEWARE setting. AuthenticationMiddleware depends on SessionMiddleware and should appear after it.
+
+For production deployments, security settings such as SECURE_SSL_REDIRECT, SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE, and allowed hosts should be reviewed carefully.
