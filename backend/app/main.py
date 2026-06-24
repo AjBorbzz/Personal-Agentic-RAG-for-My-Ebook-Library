@@ -14,10 +14,11 @@ from app.api.search import router as search_router
 from app.api.project_generator import router as project_generator_router
 from app.api.architecture_reviewer import router as architecture_reviewer_router
 from app.api.code_reviewer import router as code_reviewer_router
+from app.api import documents
 
 app = FastAPI(
     title="Personal Agentic RAG",
-    version="0.10.0",
+    version="0.11.3",
 )
 
 app.add_middleware(
@@ -45,3 +46,4 @@ app.include_router(learning_path_router, tags=["learning-path"])
 app.include_router(project_generator_router, tags=["project-generator"])
 app.include_router(architecture_reviewer_router, tags=["architecture-reviewer"])
 app.include_router(code_reviewer_router, tags=["code-reviewer"])
+app.include_router(documents.router)
