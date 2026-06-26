@@ -131,6 +131,14 @@ async def route_and_retrieve(
         query_vector=rewritten_vector,
         limit=limit,
         domains=search_domains,
+        active_only=active_only,
+        include_deprecated=include_deprecated,
+        tool_name=tool_name,
+        tool_version=tool_version,
+        version_major=version_major,
+        version_minor=version_minor,
+        source_type=source_type,
+        publication_year=publication_year,
     )
 
     decision.retrieval_attempts += 1
@@ -148,6 +156,14 @@ async def route_and_retrieve(
             query_vector=rewritten_vector,
             limit=limit,
             domains=None,
+            active_only=active_only,
+            include_deprecated=include_deprecated,
+            tool_name=tool_name,
+            tool_version=tool_version,
+            version_major=version_major,
+            version_minor=version_minor,
+            source_type=source_type,
+            publication_year=publication_year,
         )
 
         decision.retrieval_attempts += 1
