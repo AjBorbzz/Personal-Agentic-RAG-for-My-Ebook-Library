@@ -18,6 +18,15 @@ class SemanticSearchRequest(BaseModel):
     limit: int = Field(default=5, ge=1, le=20)
     domains: list[str] | None = None
     auto_detect_domains: bool = True
+    active_only: bool = True
+    include_deprecated: bool = False
+
+    tool_name: str | None = None
+    tool_version: str | None = None
+    version_major: int | None = None
+    version_minor: int | None = None
+    source_type: str | None = None
+    publication_year: int | None = None
 
 
 class SemanticSearchResult(BaseModel):
@@ -38,6 +47,17 @@ class SemanticSearchResult(BaseModel):
     chunk_index: int | None
     chunk_text: str | None
 
+    source_type: str | None = None
+    tool_name: str | None = None
+    tool_version: str | None = None
+    version_major: int | None = None
+    version_minor: int | None = None
+    publication_year: int | None = None
+    content_hash: str | None = None
+    is_active: bool | None = None
+    is_deprecated: bool | None = None
+    superseded_by_document_id: str | None = None
+
 
 class SemanticSearchResponse(BaseModel):
     query: str
@@ -49,6 +69,14 @@ class SemanticSearchResponse(BaseModel):
     results: list[SemanticSearchResult]
     elapsed_seconds: float
     elapsed_ms: float
+    active_only: bool
+    include_deprecated: bool
+    tool_name: str | None = None
+    tool_version: str | None = None
+    version_major: int | None = None
+    version_minor: int | None = None
+    source_type: str | None = None
+    publication_year: int | None = None
     
 
 
@@ -85,6 +113,14 @@ async def semantic_search(request: SemanticSearchRequest):
                 query_vector=query_vector,
                 limit=request.limit,
                 domains=None,
+                active_only=request.active_only,
+                include_deprecated=request.include_deprecated,
+                tool_name=request.tool_name,
+                tool_version=request.tool_version,
+                version_major=request.version_major,
+                version_minor=request.version_minor,
+                source_type=request.source_type,
+                publication_year=request.publication_year,
             )
             domain_filter_used = False
 
@@ -111,6 +147,7 @@ async def semantic_search(request: SemanticSearchRequest):
                     page_numbers=payload.get("page_numbers"),
                     chunk_index=payload.get("chunk_index"),
                     chunk_text=payload.get("chunk_text"),
+                    
                 )
             )
 
@@ -126,6 +163,14 @@ async def semantic_search(request: SemanticSearchRequest):
             results=results,
             elapsed_seconds=round(elapsed_seconds, 3),
             elapsed_ms=round(elapsed_seconds * 1000, 2),
+            active_only=request.active_only,
+            include_deprecated=request.include_deprecated,
+            tool_name=request.tool_name,
+            tool_version=request.tool_version,
+            version_major=request.version_major,
+            version_minor=request.version_minor,
+            source_type=request.source_type,
+            publication_year=request.publication_year,
         )
 
     except Exception as error:
