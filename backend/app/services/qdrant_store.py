@@ -9,6 +9,7 @@ from qdrant_client.models import (
     MatchAny,
     PointStruct,
     VectorParams,
+    MatchValue
 )
 
 from app.core.config import settings
@@ -84,8 +85,83 @@ def search_similar_chunks(
     query_vector: list[float],
     limit: int = 5,
     domains: list[str] | None = None,
+    active_only: bool = True,
+    include_deprecated: bool = False,
+    tool_name: str | None = None,
+    tool_version: str | None = None,
+    version_major: int | None = None,
+    version_minor: int | None = None,
+    source_type: str | None = None,
+    publication_year: int | None = None,
 ) -> list[dict[str, Any]]:
+    
+    must_conditions = []
+
     query_filter = _build_domain_filter(domains)
+
+    if active_only:
+        must_conditions.append(
+            FieldCondition(
+                key="is_active",
+                match=MatchValue(value=True),
+            )
+        )
+
+    if not include_deprecated:
+        must_conditions.append(
+            FieldCondition(
+                key="is_deprecated",
+                match=MatchValue(value=False),
+            )
+        )
+
+    if tool_name:
+        must_conditions.append(
+            FieldCondition(
+                key="tool_name",
+                match=MatchValue(value=tool_name),
+            )
+        )
+
+    if tool_version:
+        must_conditions.append(
+            FieldCondition(
+                key="tool_version",
+                match=MatchValue(value=tool_version),
+            )
+        )
+
+    if version_major is not None:
+        must_conditions.append(
+            FieldCondition(
+                key="version_major",
+                match=MatchValue(value=version_major),
+            )
+        )
+
+    if version_minor is not None:
+        must_conditions.append(
+            FieldCondition(
+                key="version_minor",
+                match=MatchValue(value=version_minor),
+            )
+        )
+
+    if source_type:
+        must_conditions.append(
+            FieldCondition(
+                key="source_type",
+                match=MatchValue(value=source_type),
+            )
+        )
+
+    if publication_year is not None:
+        must_conditions.append(
+            FieldCondition(
+                key="publication_year",
+                match=MatchValue(value=publication_year),
+            )
+        )
 
     result = client.query_points(
         collection_name=collection_name,
