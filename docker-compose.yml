@@ -6,7 +6,7 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./data/qdrant:/qdrant/storage 
+      - ./data/qdrant:/qdrant/storage
 
   postgres:
     image: postgres:16
@@ -24,4 +24,4 @@ services:
     image: redis:7
     container_name: ebook_redis
     ports:
-      - "6379:6378"
+      - "6379:6379"
