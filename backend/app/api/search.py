@@ -15,12 +15,15 @@ router = APIRouter()
 
 class SemanticSearchRequest(BaseModel):
     query: str
-    limit: int = Field(default=5, ge=1, le=20)
+    limit: int = Field(default=5, ge=1, le=30)
     domains: list[str] | None = None
     auto_detect_domains: bool = True
+
+    # Version-aware search behavior
     active_only: bool = True
     include_deprecated: bool = False
 
+    # Optional document/version filters
     tool_name: str | None = None
     tool_version: str | None = None
     version_major: int | None = None
@@ -31,6 +34,7 @@ class SemanticSearchRequest(BaseModel):
 
 class SemanticSearchResult(BaseModel):
     score: float
+
     document_id: str | None
     filename: str | None
     title: str | None
@@ -47,6 +51,7 @@ class SemanticSearchResult(BaseModel):
     chunk_index: int | None
     chunk_text: str | None
 
+    # Registry/version metadata
     source_type: str | None = None
     tool_name: str | None = None
     tool_version: str | None = None
@@ -62,13 +67,12 @@ class SemanticSearchResult(BaseModel):
 class SemanticSearchResponse(BaseModel):
     query: str
     collection_name: str
+
     detected_domains: list[str]
     search_domains: list[str]
     domain_filter_used: bool
-    result_count: int
-    results: list[SemanticSearchResult]
-    elapsed_seconds: float
-    elapsed_ms: float
+
+    # Version-aware filter metadata
     active_only: bool
     include_deprecated: bool
     tool_name: str | None = None
@@ -77,7 +81,74 @@ class SemanticSearchResponse(BaseModel):
     version_minor: int | None = None
     source_type: str | None = None
     publication_year: int | None = None
-    
+
+    result_count: int
+    results: list[SemanticSearchResult]
+
+    elapsed_seconds: float
+    elapsed_ms: float
+
+
+def _resolve_search_domains(request: SemanticSearchRequest) -> tuple[list[str], list[str]]:
+    classification = classify_domains(request.query)
+    detected_domains = classification.domains
+
+    if request.domains:
+        search_domains = [
+            normalize_domain(domain)
+            for domain in request.domains
+            if domain
+        ]
+    elif request.auto_detect_domains:
+        search_domains = detected_domains
+    else:
+        search_domains = []
+
+    # Remove duplicates while preserving order
+    search_domains = list(dict.fromkeys(search_domains))
+
+    return detected_domains, search_domains
+
+
+def _build_result(match: dict[str, Any]) -> SemanticSearchResult:
+    payload: dict[str, Any] = match.get("payload", {})
+
+    chunk_text = (
+        payload.get("chunk_text")
+        or payload.get("text")
+        or payload.get("chunk_preview")
+    )
+
+    return SemanticSearchResult(
+        score=match["score"],
+
+        document_id=payload.get("document_id"),
+        filename=payload.get("filename"),
+        title=payload.get("title"),
+        author=payload.get("author"),
+        file_type=payload.get("file_type"),
+
+        primary_domain=payload.get("primary_domain"),
+        domains=payload.get("domains"),
+
+        page_number=payload.get("page_number"),
+        page_start=payload.get("page_start"),
+        page_end=payload.get("page_end"),
+        page_numbers=payload.get("page_numbers"),
+        chunk_index=payload.get("chunk_index"),
+        chunk_text=chunk_text,
+
+        source_type=payload.get("source_type"),
+        tool_name=payload.get("tool_name"),
+        tool_version=payload.get("tool_version"),
+        version_major=payload.get("version_major"),
+        version_minor=payload.get("version_minor"),
+        publication_year=payload.get("publication_year"),
+        content_hash=payload.get("content_hash"),
+        is_active=payload.get("is_active"),
+        is_deprecated=payload.get("is_deprecated"),
+        superseded_by_document_id=payload.get("superseded_by_document_id"),
+    )
 
 
 @router.post("/search", response_model=SemanticSearchResponse)
@@ -86,27 +157,29 @@ async def semantic_search(request: SemanticSearchRequest):
 
     try:
         query_vector = await generate_embedding(request.query)
-        detected_domains = classify_domains(request.query).domains
+        detected_domains, search_domains = _resolve_search_domains(request)
 
-        if request.domains:
-            search_domains = [
-                normalize_domain(domain)
-                for domain in request.domains
-            ]
-        elif request.auto_detect_domains:
-            search_domains = detected_domains
-        else:
-            search_domains = []
+        domain_filter_used = bool(
+            search_domains and search_domains != ["general"]
+        )
 
         matches = search_similar_chunks(
             collection_name=settings.default_collection,
             query_vector=query_vector,
             limit=request.limit,
             domains=search_domains,
+            active_only=request.active_only,
+            include_deprecated=request.include_deprecated,
+            tool_name=request.tool_name,
+            tool_version=request.tool_version,
+            version_major=request.version_major,
+            version_minor=request.version_minor,
+            source_type=request.source_type,
+            publication_year=request.publication_year,
         )
 
-        domain_filter_used = bool(search_domains and search_domains != ["general"])
-
+        # Fallback: if domain-filtered search returns nothing,
+        # retry without domain filtering but keep version/status filters.
         if not matches and domain_filter_used:
             matches = search_similar_chunks(
                 collection_name=settings.default_collection,
@@ -124,32 +197,7 @@ async def semantic_search(request: SemanticSearchRequest):
             )
             domain_filter_used = False
 
-        results: list[SemanticSearchResult] = []
-
-        for match in matches:
-            payload: dict[str, Any] = match.get("payload", {})
-
-            results.append(
-                SemanticSearchResult(
-                    score=match["score"],
-                    document_id=payload.get("document_id"),
-                    filename=payload.get("filename"),
-                    title=payload.get("title"),
-                    author=payload.get("author"),
-                    file_type=payload.get("file_type"),
-
-                    primary_domain=payload.get("primary_domain"),
-                    domains=payload.get("domains"),
-
-                    page_number=payload.get("page_number"),
-                    page_start=payload.get("page_start"),
-                    page_end=payload.get("page_end"),
-                    page_numbers=payload.get("page_numbers"),
-                    chunk_index=payload.get("chunk_index"),
-                    chunk_text=payload.get("chunk_text"),
-                    
-                )
-            )
+        results = [_build_result(match) for match in matches]
 
         elapsed_seconds = time.perf_counter() - start_time
 
@@ -159,10 +207,7 @@ async def semantic_search(request: SemanticSearchRequest):
             detected_domains=detected_domains,
             search_domains=search_domains,
             domain_filter_used=domain_filter_used,
-            result_count=len(results),
-            results=results,
-            elapsed_seconds=round(elapsed_seconds, 3),
-            elapsed_ms=round(elapsed_seconds * 1000, 2),
+
             active_only=request.active_only,
             include_deprecated=request.include_deprecated,
             tool_name=request.tool_name,
@@ -171,10 +216,16 @@ async def semantic_search(request: SemanticSearchRequest):
             version_minor=request.version_minor,
             source_type=request.source_type,
             publication_year=request.publication_year,
+
+            result_count=len(results),
+            results=results,
+
+            elapsed_seconds=round(elapsed_seconds, 3),
+            elapsed_ms=round(elapsed_seconds * 1000, 2),
         )
 
     except Exception as error:
         raise HTTPException(
             status_code=500,
-            detail=f"Semantic search failed: {error}",
+            detail=f"Semantic search failed: {type(error).__name__}: {error}",
         )
