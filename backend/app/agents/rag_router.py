@@ -57,6 +57,14 @@ async def route_and_retrieve(
                                 limit: int,
                                 manual_domains: list[str] | None = None,
                                 auto_detect_domains: bool = True,
+                                active_only: bool = True,
+                                include_deprecated: bool = False,
+                                tool_name: str | None = None,
+                                tool_version: str | None = None,
+                                version_major: int | None = None,
+                                version_minor: int | None = None,
+                                source_type: str | None = None,
+                                publication_year: int | None = None,
                             ) -> RouterDecision:
     intent_result = classify_intent(question)
     domain_result = classify_domains(question)
@@ -89,6 +97,14 @@ async def route_and_retrieve(
         query_vector=query_vector,
         limit=limit,
         domains=search_domains,
+        active_only=active_only,
+        include_deprecated=include_deprecated,
+        tool_name=tool_name,
+        tool_version=tool_version,
+        version_major=version_major,
+        version_minor=version_minor,
+        source_type=source_type,
+        publication_year=publication_year,
     )
 
     decision.retrieval_attempts += 1
