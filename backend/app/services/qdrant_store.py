@@ -1,5 +1,5 @@
 from typing import Any
-from uuid import uuid5, NAMESPACE_URL
+from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -7,9 +7,9 @@ from qdrant_client.models import (
     FieldCondition,
     Filter,
     MatchAny,
+    MatchValue,
     PointStruct,
     VectorParams,
-    MatchValue
 )
 
 from app.core.config import settings
@@ -58,32 +58,18 @@ def upsert_chunks(
     return len(points)
 
 
-def _build_domain_filter(domains: list[str] | None) -> Filter | None:
+def _clean_domains(domains: list[str] | None) -> list[str]:
     if not domains:
-        return None
+        return []
 
-    cleaned_domains = [
-        domain for domain in domains
-        if domain and domain != "general"
+    return [
+        domain.strip()
+        for domain in domains
+        if domain and domain.strip() and domain.strip() != "general"
     ]
 
-    if not cleaned_domains:
-        return None
 
-    return Filter(
-        must=[
-            FieldCondition(
-                key="domains",
-                match=MatchAny(any=cleaned_domains),
-            )
-        ]
-    )
-
-
-def search_similar_chunks(
-    collection_name: str,
-    query_vector: list[float],
-    limit: int = 5,
+def _build_search_filter(
     domains: list[str] | None = None,
     active_only: bool = True,
     include_deprecated: bool = False,
@@ -93,11 +79,25 @@ def search_similar_chunks(
     version_minor: int | None = None,
     source_type: str | None = None,
     publication_year: int | None = None,
-) -> list[dict[str, Any]]:
-    
+) -> Filter | None:
+    """
+    Build a Qdrant payload filter.
+
+    Default behavior:
+    - active_only=True means only is_active=true chunks are searched.
+    - include_deprecated=False means is_deprecated=true chunks are excluded.
+    """
     must_conditions = []
 
-    query_filter = _build_domain_filter(domains)
+    cleaned_domains = _clean_domains(domains)
+
+    if cleaned_domains:
+        must_conditions.append(
+            FieldCondition(
+                key="domains",
+                match=MatchAny(any=cleaned_domains),
+            )
+        )
 
     if active_only:
         must_conditions.append(
@@ -163,12 +163,45 @@ def search_similar_chunks(
             )
         )
 
+    if not must_conditions:
+        return None
+
+    return Filter(must=must_conditions)
+
+
+def search_similar_chunks(
+    collection_name: str,
+    query_vector: list[float],
+    limit: int = 5,
+    domains: list[str] | None = None,
+    active_only: bool = True,
+    include_deprecated: bool = False,
+    tool_name: str | None = None,
+    tool_version: str | None = None,
+    version_major: int | None = None,
+    version_minor: int | None = None,
+    source_type: str | None = None,
+    publication_year: int | None = None,
+) -> list[dict[str, Any]]:
+    query_filter = _build_search_filter(
+        domains=domains,
+        active_only=active_only,
+        include_deprecated=include_deprecated,
+        tool_name=tool_name,
+        tool_version=tool_version,
+        version_major=version_major,
+        version_minor=version_minor,
+        source_type=source_type,
+        publication_year=publication_year,
+    )
+
     result = client.query_points(
         collection_name=collection_name,
         query=query_vector,
         query_filter=query_filter,
         limit=limit,
         with_payload=True,
+        with_vectors=False,
     )
 
     matches: list[dict[str, Any]] = []
@@ -183,6 +216,37 @@ def search_similar_chunks(
         )
 
     return matches
+
+
+# Backward-compatible alias.
+def search_chunks(
+    collection_name: str,
+    query_vector: list[float],
+    limit: int = 5,
+    domains: list[str] | None = None,
+    active_only: bool = True,
+    include_deprecated: bool = False,
+    tool_name: str | None = None,
+    tool_version: str | None = None,
+    version_major: int | None = None,
+    version_minor: int | None = None,
+    source_type: str | None = None,
+    publication_year: int | None = None,
+) -> list[dict[str, Any]]:
+    return search_similar_chunks(
+        collection_name=collection_name,
+        query_vector=query_vector,
+        limit=limit,
+        domains=domains,
+        active_only=active_only,
+        include_deprecated=include_deprecated,
+        tool_name=tool_name,
+        tool_version=tool_version,
+        version_major=version_major,
+        version_minor=version_minor,
+        source_type=source_type,
+        publication_year=publication_year,
+    )
 
 
 def get_collection_info(collection_name: str) -> dict[str, Any]:
