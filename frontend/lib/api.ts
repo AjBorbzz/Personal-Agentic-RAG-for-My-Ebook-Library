@@ -58,3 +58,23 @@ export async function apiUpload<TResponse>(
 
   return response.json();
 }
+
+export async function apiPatch<TResponse, TBody>(
+  path: string,
+  body: TBody
+): Promise<TResponse> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`PATCH ${path} failed: ${response.status} ${errorText}`);
+  }
+
+  return response.json();
+}
