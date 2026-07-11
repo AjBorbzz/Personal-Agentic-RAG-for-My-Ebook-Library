@@ -6,6 +6,12 @@ const tools = [
     description: "Upload PDFs, EPUBs, or TXT files and index them into Qdrant.",
     href: "/ingest",
   },
+    {
+  title: "Document Library",
+  description:
+    "View registered documents, versions, active status, and deprecated sources.",
+  href: "/documents",
+},
   {
     title: "Semantic Search",
     description: "Inspect retrieved chunks directly before LLM generation.",
@@ -50,12 +56,7 @@ const tools = [
     description: "Verify that the FastAPI backend is reachable.",
     href: "/health",
   },
-  {
-  title: "Document Library",
-  description:
-    "View registered documents, versions, active status, and deprecated sources.",
-  href: "/documents",
-},
+
 ];
 
 export default function HomePage() {
