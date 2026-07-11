@@ -50,6 +50,12 @@ const tools = [
     description: "Verify that the FastAPI backend is reachable.",
     href: "/health",
   },
+  {
+  title: "Document Library",
+  description:
+    "View registered documents, versions, active status, and deprecated sources.",
+  href: "/documents",
+},
 ];
 
 export default function HomePage() {
