@@ -1,7 +1,9 @@
 from app.db.base import Base
 from app.db.session import engine
 
-from app.models.document import Document  # noqa: F401
+from app.models.document import Document 
+from app.models.ingestion_job import IngestionJob
+
 
 
 def init_db() -> None:
