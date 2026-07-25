@@ -1,0 +1,4 @@
+Background ingestion queue test.
+
+This file should be saved as an ingestion job with queued status.
+The background worker will process it during Phase 12H.
