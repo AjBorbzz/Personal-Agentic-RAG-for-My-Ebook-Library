@@ -22,6 +22,7 @@ from app.models.ingestion_job import IngestionJob
 from app.schemas.ingestion_job import (
     CancelJobResponse,
     IngestionJobResponse,
+    RetryJobResponse,
 )
 
 router = APIRouter(
@@ -264,4 +265,66 @@ def cancel_ingestion_job(
         job_id=job.job_id,
         status=job.status,
         message="Ingestion job cancelled.",
+    )
+
+@router.patch(
+    "/{job_id}/retry",
+    response_model=RetryJobResponse,
+)
+def retry_ingestion_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+):
+    job = db.get(IngestionJob, job_id)
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Ingestion job not found.",
+        )
+
+    if job.status not in {"failed", "cancelled"}:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Only failed or cancelled jobs can be retried. "
+                f"Current status: {job.status}"
+            ),
+        )
+
+    if not job.upload_path:
+        raise HTTPException(
+            status_code=409,
+            detail="The job does not have an upload path.",
+        )
+
+    upload_path = Path(job.upload_path)
+
+    if not upload_path.exists():
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The original queued upload no longer exists. "
+                "Upload the file again."
+            ),
+        )
+
+    job.status = "queued"
+    job.current_step = "waiting"
+    job.progress_percent = 0
+
+    # Reset attempts for a user-requested retry.
+    job.attempt_count = 0
+
+    job.error_message = None
+    job.started_at = None
+    job.completed_at = None
+
+    db.commit()
+    db.refresh(job)
+
+    return RetryJobResponse(
+        job_id=job.job_id,
+        status=job.status,
+        message="Ingestion job returned to the queue.",
     )

@@ -6,6 +6,12 @@ const tools = [
     description: "Upload PDFs, EPUBs, or TXT files and index them into Qdrant.",
     href: "/ingest",
   },
+  {
+  title: "Ingestion Jobs",
+  description:
+    "Monitor queued, running, completed, failed, and retried ingestion jobs.",
+  href: "/ingestion-jobs",
+},
     {
   title: "Document Library",
   description:

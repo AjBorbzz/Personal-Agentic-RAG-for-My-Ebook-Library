@@ -48,3 +48,9 @@ class CancelJobResponse(BaseModel):
     job_id: str
     status: str
     message: str
+
+
+class RetryJobResponse(BaseModel):
+    job_id: str
+    status: str
+    message: str
