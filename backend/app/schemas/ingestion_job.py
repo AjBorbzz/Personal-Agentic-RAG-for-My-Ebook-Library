@@ -10,6 +10,8 @@ class IngestionJobResponse(BaseModel):
     document_id: str | None
 
     status: str
+    current_step: str | None
+    progress_percent: int
 
     original_filename: str | None
     stored_filename: str | None
@@ -27,9 +29,12 @@ class IngestionJobResponse(BaseModel):
 
     is_active: bool
     is_deprecated: bool
+    index_after_ingest: bool
+
+    attempt_count: int
+    max_attempts: int
 
     notes: str | None
-
     result: dict | None
     error_message: str | None
 

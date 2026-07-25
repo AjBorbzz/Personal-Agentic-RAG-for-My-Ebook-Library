@@ -1,15 +1,13 @@
 from app.db.base import Base
 from app.db.session import engine
-
-from app.models.document import Document 
-from app.models.ingestion_job import IngestionJob
-
+from app.models.document import Document  # noqa: F401
+from app.models.ingestion_job import IngestionJob  # noqa: F401
 
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    print("Database tables created.")
 
 
 if __name__ == "__main__":
     init_db()
-    print("Database tables created.")
