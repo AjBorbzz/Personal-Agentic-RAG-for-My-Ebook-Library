@@ -15,6 +15,7 @@ from app.api.project_generator import router as project_generator_router
 from app.api.architecture_reviewer import router as architecture_reviewer_router
 from app.api.code_reviewer import router as code_reviewer_router
 from app.api import documents
+from app.api import ingestion_jobs
 
 app = FastAPI(
     title="Personal Agentic RAG",
@@ -47,3 +48,4 @@ app.include_router(project_generator_router, tags=["project-generator"])
 app.include_router(architecture_reviewer_router, tags=["architecture-reviewer"])
 app.include_router(code_reviewer_router, tags=["code-reviewer"])
 app.include_router(documents.router)
+app.include_router(ingestion_jobs.router)

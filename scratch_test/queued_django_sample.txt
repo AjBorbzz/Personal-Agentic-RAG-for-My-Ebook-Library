@@ -1,0 +1,8 @@
+Django background ingestion queue test.
+
+This file should be uploaded and registered as a queued ingestion job.
+The worker will process it later in Phase 12H.
+
+
+
+
