@@ -1,0 +1,7 @@
+Phase 12H background worker test.
+
+The ingestion worker should retrieve this queued job, process it through
+the ingestion endpoint, create the document registry entry, and index
+the resulting chunks into Qdrant.
+
+
