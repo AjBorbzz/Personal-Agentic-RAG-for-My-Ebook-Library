@@ -1,0 +1,116 @@
+{
+	"document_id": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b",
+	"dry_run": false,
+	"applied": true,
+	"overwrite_existing": false,
+	"source_characters_used": 107,
+	"source_was_truncated": false,
+	"candidate": {
+		"title": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b_dashboard_test",
+		"author": null,
+		"subtitle": "Building Reliable Data-Intensive Systems",
+		"publisher": "Example Publisher",
+		"edition": "2nd Edition",
+		"isbn_10": null,
+		"isbn_13": null,
+		"language": "en",
+		"publication_year": 2026,
+		"description": "This file is part of a dashboard test for ingestion processes, tracking the status from queued to running, indexing, and completed phases.",
+		"difficulty_level": "advanced",
+		"topics": [
+			"replication",
+			"partitioning",
+			"consensus"
+		],
+		"technologies": [
+			"postgresql",
+			"distributed-databases"
+		],
+		"tags": [
+			"distributed-systems",
+			"data-engineering",
+			"system-design"
+		],
+		"prerequisite_skills": [
+			"databases",
+			"backend-development"
+		],
+		"metadata_confidence": 0.6
+	},
+	"proposed_updates": {
+		"description": "This file is part of a dashboard test for ingestion processes, tracking the status from queued to running, indexing, and completed phases."
+	},
+	"updated_fields": [
+		"description",
+		"metadata_source",
+		"metadata_confidence",
+		"metadata_reviewed",
+		"enriched_at"
+	],
+	"warnings": [
+
+	],
+	"document": {
+		"document_id": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b",
+		"filename": "dashboard_test.txt",
+		"title": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b_dashboard_test",
+		"author": null,
+		"file_type": "txt",
+		"source_type": "notes",
+		"tool_name": "personal-rag",
+		"tool_version": "1.1",
+		"version_major": 1,
+		"version_minor": 1,
+		"publication_year": 2026,
+		"publication_date": null,
+		"primary_domain": "system_architecture",
+		"domains": [
+			"system_architecture",
+			"databases"
+		],
+		"page_count": null,
+		"chunk_count": 1,
+		"text_characters": 107,
+		"content_hash": "a13abf39be1ff778eb930916bd75c3c75b59a4bf7440fdb336cf4fdd493b69b4",
+		"is_active": false,
+		"is_deprecated": true,
+		"superseded_by_document_id": null,
+		"saved_path": "/Users/ajborbz/Projects/personal_agentic_rag_for_my_ebooks/data/uploads/7864cc7f-f321-4fca-99f7-c2c474ae4c6b_dashboard_test.txt",
+		"parsed_output_path": "/Users/ajborbz/Projects/personal_agentic_rag_for_my_ebooks/data/parsed/7864cc7f-f321-4fca-99f7-c2c474ae4c6b.json",
+		"chunks_output_path": "/Users/ajborbz/Projects/personal_agentic_rag_for_my_ebooks/data/chunks/7864cc7f-f321-4fca-99f7-c2c474ae4c6b.json",
+		"notes": "Deprecated from Document Library UI.",
+		"ingested_at": "2026-07-25T20:38:49.760479Z",
+		"created_at": "2026-07-25T20:38:49.760488Z",
+		"updated_at": "2026-07-27T20:08:15.408731Z",
+		"subtitle": "Building Reliable Data-Intensive Systems",
+		"publisher": "Example Publisher",
+		"edition": "2nd Edition",
+		"isbn_10": null,
+		"isbn_13": null,
+		"language": "en",
+		"description": "This file is part of a dashboard test for ingestion processes, tracking the status from queued to running, indexing, and completed phases.",
+		"difficulty_level": "advanced",
+		"topics": [
+			"replication",
+			"partitioning",
+			"consensus"
+		],
+		"technologies": [
+			"postgresql",
+			"distributed-databases"
+		],
+		"tags": [
+			"distributed-systems",
+			"data-engineering",
+			"system-design"
+		],
+		"prerequisite_skills": [
+			"databases",
+			"backend-development"
+		],
+		"metadata_source": "llm",
+		"metadata_confidence": 0.6,
+		"metadata_reviewed": false,
+		"enriched_at": "2026-07-27T20:08:15.399522Z"
+	}
+}

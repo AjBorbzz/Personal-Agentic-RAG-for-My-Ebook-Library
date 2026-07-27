@@ -57,7 +57,11 @@ class DocumentCreate(BaseModel):
     prerequisite_skills: list[str] | None = None
 
     metadata_source: str | None = None
-    metadata_confidence: float | None = None
+    metadata_confidence: float | None = Field(
+    default=None,
+        ge=0.0,
+        le=1.0,
+    )
     metadata_reviewed: bool = False
 
 
@@ -184,6 +188,6 @@ class DocumentResponse(BaseModel):
     prerequisite_skills: list[str] | None
 
     metadata_source: str | None
-    metadata_confidence: float | None
+    metadata_confidence: float | None 
     metadata_reviewed: bool
     enriched_at: datetime | None
