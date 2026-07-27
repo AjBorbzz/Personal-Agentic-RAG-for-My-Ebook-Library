@@ -1,6 +1,3 @@
 Phase 12H ingestion dashboard test.
 
 This file should move from queued to running, indexing, and completed.
-
-
-

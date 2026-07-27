@@ -17,10 +17,19 @@ from app.schemas.document_enrichment import (
     DocumentEnrichmentRequest,
     DocumentEnrichmentResponse,
 )
+
+from app.schemas.metadata_review import (
+    MetadataCandidateResponse,
+    MetadataReviewRequest,
+    MetadataReviewResponse,
+    MetadataReviewStateResponse,
+    StageMetadataCandidateRequest,
+)
 from app.services.book_metadata_enrichment import (
     build_metadata_updates,
     generate_metadata_candidate,
 )
+from app.schemas.document_enrichment import EnrichedBookMetadata
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -249,3 +258,268 @@ async def enrich_document_metadata(
         warnings=warnings,
         document=document,
     )
+
+
+@router.post("/{document_id}/metadata-candidate",response_model=MetadataCandidateResponse,)
+async def stage_metadata_candidate(
+    document_id: str,
+    request: StageMetadataCandidateRequest,
+    db: Session = Depends(get_db),
+):
+    document = db.get(Document, document_id)
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    warnings: list[str] = []
+
+    try:
+        (
+            candidate,
+            source_characters_used,
+            source_was_truncated,
+        ) = await generate_metadata_candidate(
+            document=document,
+            maximum_source_characters=(
+                request.max_source_characters
+            ),
+        )
+
+        proposed_updates = build_metadata_updates(
+            document=document,
+            candidate=candidate,
+            overwrite_existing=request.overwrite_existing,
+        )
+
+        if source_was_truncated:
+            warnings.append(
+                "The beginning, middle, and end of the "
+                "document were sampled."
+            )
+
+        if not proposed_updates:
+            warnings.append(
+                "No missing or overwrite-eligible fields "
+                "were found."
+            )
+
+        document.metadata_candidate = candidate.model_dump()
+        document.metadata_proposed_updates = proposed_updates
+        document.metadata_review_status = "pending"
+        document.metadata_review_notes = None
+        document.metadata_reviewed = False
+        document.metadata_reviewed_at = None
+
+        document.metadata_source = "llm"
+        document.metadata_confidence = (
+            candidate.metadata_confidence
+        )
+        document.enriched_at = datetime.now(timezone.utc)
+
+        db.commit()
+        db.refresh(document)
+
+        return MetadataCandidateResponse(
+            document_id=document.document_id,
+            review_status=document.metadata_review_status,
+            candidate=candidate,
+            proposed_updates=proposed_updates,
+            source_characters_used=source_characters_used,
+            source_was_truncated=source_was_truncated,
+            warnings=warnings,
+            document=document,
+        )
+
+    except FileNotFoundError as error:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=422,
+            detail=str(error),
+        ) from error
+
+    except (ValueError, TypeError) as error:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "The metadata model returned invalid output: "
+                f"{error}"
+            ),
+        ) from error
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except Exception as error:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Failed to stage metadata candidate: "
+                f"{type(error).__name__}: {error}"
+            ),
+        ) from error
+
+
+@router.get(
+    "/{document_id}/metadata-review",
+    response_model=MetadataReviewStateResponse,
+)
+def get_metadata_review(
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+    document = db.get(Document, document_id)
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    candidate = None
+
+    if document.metadata_candidate:
+        candidate = EnrichedBookMetadata.model_validate(
+            document.metadata_candidate
+        )
+
+    return MetadataReviewStateResponse(
+        document_id=document.document_id,
+        review_status=document.metadata_review_status,
+        candidate=candidate,
+        proposed_updates=(
+            document.metadata_proposed_updates or {}
+        ),
+        review_notes=document.metadata_review_notes,
+        metadata_confidence=document.metadata_confidence,
+        enriched_at=document.enriched_at,
+        reviewed_at=document.metadata_reviewed_at,
+        document=document,
+    )
+
+
+@router.patch(
+    "/{document_id}/metadata-review",
+    response_model=MetadataReviewResponse,
+)
+def review_document_metadata(
+    document_id: str,
+    request: MetadataReviewRequest,
+    db: Session = Depends(get_db),
+):
+    document = db.get(Document, document_id)
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    if not document.metadata_candidate:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This document does not have a staged "
+                "metadata candidate."
+            ),
+        )
+
+    try:
+        if request.edited_candidate is not None:
+            candidate = request.edited_candidate
+        else:
+            candidate = EnrichedBookMetadata.model_validate(
+                document.metadata_candidate
+            )
+
+        now = datetime.now(timezone.utc)
+
+        if request.action == "reject":
+            document.metadata_review_status = "rejected"
+            document.metadata_review_notes = (
+                request.review_notes
+            )
+            document.metadata_reviewed = False
+            document.metadata_reviewed_at = now
+
+            db.commit()
+            db.refresh(document)
+
+            return MetadataReviewResponse(
+                document_id=document.document_id,
+                action="reject",
+                review_status="rejected",
+                applied=False,
+                updated_fields=[],
+                candidate=candidate,
+                proposed_updates=(
+                    document.metadata_proposed_updates or {}
+                ),
+                document=document,
+            )
+
+        proposed_updates = build_metadata_updates(
+            document=document,
+            candidate=candidate,
+            overwrite_existing=request.overwrite_existing,
+        )
+
+        updated_fields: list[str] = []
+
+        for field_name, value in proposed_updates.items():
+            setattr(document, field_name, value)
+            updated_fields.append(field_name)
+
+        document.metadata_candidate = candidate.model_dump()
+        document.metadata_proposed_updates = proposed_updates
+        document.metadata_review_status = "approved"
+        document.metadata_review_notes = request.review_notes
+        document.metadata_reviewed = True
+        document.metadata_reviewed_at = now
+
+        document.metadata_source = "llm_reviewed"
+        document.metadata_confidence = (
+            candidate.metadata_confidence
+        )
+        document.enriched_at = now
+
+        db.commit()
+        db.refresh(document)
+
+        return MetadataReviewResponse(
+            document_id=document.document_id,
+            action="approve",
+            review_status="approved",
+            applied=bool(updated_fields),
+            updated_fields=updated_fields,
+            candidate=candidate,
+            proposed_updates=proposed_updates,
+            document=document,
+        )
+
+    except ValueError as error:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid metadata candidate: {error}",
+        ) from error
+
+    except Exception as error:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Metadata review failed: "
+                f"{type(error).__name__}: {error}"
+            ),
+        ) from error

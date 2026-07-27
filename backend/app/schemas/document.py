@@ -191,3 +191,9 @@ class DocumentResponse(BaseModel):
     metadata_confidence: float | None 
     metadata_reviewed: bool
     enriched_at: datetime | None
+
+    metadata_candidate: dict | None
+    metadata_proposed_updates: dict | None
+    metadata_review_status: str
+    metadata_review_notes: str | None
+    metadata_reviewed_at: datetime | None

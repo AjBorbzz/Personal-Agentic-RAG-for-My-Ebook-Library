@@ -166,3 +166,30 @@ class Document(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+
+    metadata_candidate: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    metadata_proposed_updates: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    metadata_review_status: Mapped[str] = mapped_column(
+        String(30),
+        default="not_requested",
+        index=True,
+    )
+    # not_requested, pending, approved, rejected
+
+    metadata_review_notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    metadata_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
