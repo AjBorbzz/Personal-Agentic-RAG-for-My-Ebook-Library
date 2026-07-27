@@ -40,6 +40,26 @@ class DocumentCreate(BaseModel):
 
     notes: str | None = None
 
+    subtitle: str | None = None
+    publisher: str | None = None
+    edition: str | None = None
+
+    isbn_10: str | None = None
+    isbn_13: str | None = None
+    language: str | None = None
+
+    description: str | None = None
+    difficulty_level: str | None = None
+
+    topics: list[str] | None = None
+    technologies: list[str] | None = None
+    tags: list[str] | None = None
+    prerequisite_skills: list[str] | None = None
+
+    metadata_source: str | None = None
+    metadata_confidence: float | None = None
+    metadata_reviewed: bool = False
+
 
 class DocumentUpdate(BaseModel):
     filename: str | None = None
@@ -74,6 +94,30 @@ class DocumentUpdate(BaseModel):
     chunks_output_path: str | None = None
 
     notes: str | None = None
+
+    subtitle: str | None = None
+    publisher: str | None = None
+    edition: str | None = None
+
+    isbn_10: str | None = None
+    isbn_13: str | None = None
+    language: str | None = None
+
+    description: str | None = None
+    difficulty_level: str | None = None
+
+    topics: list[str] | None = None
+    technologies: list[str] | None = None
+    tags: list[str] | None = None
+    prerequisite_skills: list[str] | None = None
+
+    metadata_source: str | None = None
+    metadata_confidence: float | None = Field(
+            default=None,
+            ge=0.0,
+            le=1.0,
+        )
+    metadata_reviewed: bool | None = None
 
 
 class DocumentDeprecateRequest(BaseModel):
@@ -122,3 +166,24 @@ class DocumentResponse(BaseModel):
     ingested_at: datetime
     created_at: datetime
     updated_at: datetime
+
+    subtitle: str | None
+    publisher: str | None
+    edition: str | None
+
+    isbn_10: str | None
+    isbn_13: str | None
+    language: str | None
+
+    description: str | None
+    difficulty_level: str | None
+
+    topics: list[str] | None
+    technologies: list[str] | None
+    tags: list[str] | None
+    prerequisite_skills: list[str] | None
+
+    metadata_source: str | None
+    metadata_confidence: float | None
+    metadata_reviewed: bool
+    enriched_at: datetime | None

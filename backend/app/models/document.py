@@ -1,6 +1,16 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -68,4 +78,91 @@ class Document(Base):
         DateTime(timezone=True),
         default=utc_now,
         onupdate=utc_now,
+    )
+
+    subtitle: Mapped[str | None] = mapped_column(
+    String(500),
+    nullable=True,
+    )
+
+    publisher: Mapped[str | None] = mapped_column(
+        String(300),
+        nullable=True,
+    )
+
+    edition: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    isbn_10: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        index=True,
+    )
+
+    isbn_13: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        index=True,
+    )
+
+    language: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    difficulty_level: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+    )
+    # Suggested values:
+    # beginner, intermediate, advanced, mixed, unknown
+
+    topics: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    technologies: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    tags: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    prerequisite_skills: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    metadata_source: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+    # manual, extracted, llm, imported
+
+    metadata_confidence: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    metadata_reviewed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        index=True,
+    )
+
+    enriched_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
