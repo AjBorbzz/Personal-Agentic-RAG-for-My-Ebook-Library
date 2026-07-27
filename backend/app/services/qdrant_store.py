@@ -8,6 +8,7 @@ from qdrant_client.models import (
     Filter,
     MatchAny,
     MatchValue,
+    PayloadSchemaType,
     PointStruct,
     VectorParams,
 )
@@ -16,6 +17,8 @@ from app.core.config import settings
 
 
 client = QdrantClient(url=settings.qdrant_url)
+
+
 
 
 def ensure_collection(collection_name: str, vector_size: int) -> None:
@@ -252,3 +255,146 @@ def search_chunks(
 def get_collection_info(collection_name: str) -> dict[str, Any]:
     info = client.get_collection(collection_name=collection_name)
     return info.model_dump()
+
+def _build_document_filter(document_id: str) -> Filter:
+    return Filter(
+        must=[
+            FieldCondition(
+                key="document_id",
+                match=MatchValue(value=document_id),
+            )
+        ]
+    )
+
+def count_document_chunks(
+    collection_name: str,
+    document_id: str,
+) -> int:
+    result = client.count(
+        collection_name=collection_name,
+        count_filter=_build_document_filter(document_id),
+        exact=True,
+    )
+
+    return result.count
+
+
+def update_document_payload(
+    collection_name: str,
+    document_id: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Update document-level metadata on every Qdrant chunk that
+    belongs to the supplied document ID.
+
+    Empty values are deleted first so stale metadata does not
+    remain in Qdrant.
+    """
+
+    document_filter = _build_document_filter(document_id)
+
+    payload_to_set: dict[str, Any] = {}
+    keys_to_delete: list[str] = []
+
+    for key, value in payload.items():
+        if value is None:
+            keys_to_delete.append(key)
+            continue
+
+        if isinstance(value, str) and not value.strip():
+            keys_to_delete.append(key)
+            continue
+
+        if isinstance(value, list) and not value:
+            keys_to_delete.append(key)
+            continue
+
+        payload_to_set[key] = value
+
+    if keys_to_delete:
+        client.delete_payload(
+            collection_name=collection_name,
+            keys=keys_to_delete,
+            points=document_filter,
+            wait=True,
+        )
+
+    if payload_to_set:
+        client.set_payload(
+            collection_name=collection_name,
+            payload=payload_to_set,
+            points=document_filter,
+            wait=True,
+        )
+
+    return {
+        "matched_points": count_document_chunks(
+            collection_name=collection_name,
+            document_id=document_id,
+        ),
+        "payload_keys_set": sorted(payload_to_set.keys()),
+        "payload_keys_deleted": sorted(keys_to_delete),
+    }
+
+DOCUMENT_METADATA_INDEXES = {
+    "document_id": PayloadSchemaType.KEYWORD,
+    "source_type": PayloadSchemaType.KEYWORD,
+    "tool_name": PayloadSchemaType.KEYWORD,
+    "tool_version": PayloadSchemaType.KEYWORD,
+    "version_major": PayloadSchemaType.INTEGER,
+    "version_minor": PayloadSchemaType.INTEGER,
+    "publication_year": PayloadSchemaType.INTEGER,
+    "is_active": PayloadSchemaType.BOOL,
+    "is_deprecated": PayloadSchemaType.BOOL,
+
+    "language": PayloadSchemaType.KEYWORD,
+    "difficulty_level": PayloadSchemaType.KEYWORD,
+
+    "topics": PayloadSchemaType.KEYWORD,
+    "technologies": PayloadSchemaType.KEYWORD,
+    "tags": PayloadSchemaType.KEYWORD,
+    "prerequisite_skills": PayloadSchemaType.KEYWORD,
+
+    "metadata_source": PayloadSchemaType.KEYWORD,
+    "metadata_review_status": PayloadSchemaType.KEYWORD,
+    "metadata_reviewed": PayloadSchemaType.BOOL,
+}
+
+
+def ensure_document_metadata_indexes(
+    collection_name: str,
+) -> list[str]:
+    """
+    Create only the missing Qdrant payload indexes used by
+    document and enrichment filters.
+    """
+
+    collection_info = client.get_collection(
+        collection_name=collection_name
+    )
+
+    existing_schema = (
+        getattr(collection_info, "payload_schema", None)
+        or {}
+    )
+
+    existing_fields = set(existing_schema.keys())
+    created_indexes: list[str] = []
+
+    for field_name, field_schema in (
+        DOCUMENT_METADATA_INDEXES.items()
+    ):
+        if field_name in existing_fields:
+            continue
+
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name=field_name,
+            field_schema=field_schema,
+            wait=True,
+        )
+
+        created_indexes.append(field_name)
+
+    return created_indexes

@@ -31,6 +31,15 @@ from app.services.book_metadata_enrichment import (
 )
 from app.schemas.document_enrichment import EnrichedBookMetadata
 
+from app.core.config import settings
+from app.schemas.document_qdrant_sync import (
+    DocumentQdrantSyncRequest,
+    DocumentQdrantSyncResponse,
+)
+from app.services.document_qdrant_sync import (
+    sync_document_metadata_to_qdrant,
+)
+
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
@@ -454,17 +463,19 @@ def review_document_metadata(
             db.refresh(document)
 
             return MetadataReviewResponse(
-                document_id=document.document_id,
-                action="reject",
-                review_status="rejected",
-                applied=False,
-                updated_fields=[],
-                candidate=candidate,
-                proposed_updates=(
-                    document.metadata_proposed_updates or {}
-                ),
-                document=document,
-            )
+                    document_id=document.document_id,
+                    action="reject",
+                    review_status="rejected",
+                    applied=False,
+                    updated_fields=[],
+                    candidate=candidate,
+                    proposed_updates=(
+                        document.metadata_proposed_updates or {}
+                    ),
+                    qdrant_sync=None,
+                    warnings=[],
+                    document=document,
+                )
 
         proposed_updates = build_metadata_updates(
             document=document,
@@ -494,6 +505,28 @@ def review_document_metadata(
         db.commit()
         db.refresh(document)
 
+        qdrant_sync = None
+        warnings: list[str] = []
+
+        if request.sync_to_qdrant:
+            try:
+                sync_result = sync_document_metadata_to_qdrant(
+                    document=document,
+                    collection_name=settings.default_collection,
+                    create_payload_indexes=True,
+                )
+
+                qdrant_sync = DocumentQdrantSyncResponse(
+                    **sync_result
+                )
+
+            except Exception as sync_error:
+                warnings.append(
+                    "Metadata was approved in PostgreSQL, but "
+                    "Qdrant synchronization failed: "
+                    f"{type(sync_error).__name__}: {sync_error}"
+                )
+
         return MetadataReviewResponse(
             document_id=document.document_id,
             action="approve",
@@ -502,6 +535,8 @@ def review_document_metadata(
             updated_fields=updated_fields,
             candidate=candidate,
             proposed_updates=proposed_updates,
+            qdrant_sync=qdrant_sync,
+            warnings=warnings,
             document=document,
         )
 
@@ -520,6 +555,68 @@ def review_document_metadata(
             status_code=500,
             detail=(
                 "Metadata review failed: "
+                f"{type(error).__name__}: {error}"
+            ),
+        ) from error
+
+
+@router.post(
+    "/{document_id}/sync-qdrant",
+    response_model=DocumentQdrantSyncResponse,
+)
+def sync_document_qdrant_metadata(
+    document_id: str,
+    request: DocumentQdrantSyncRequest,
+    db: Session = Depends(get_db),
+):
+    document = db.get(Document, document_id)
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    if (
+        not request.force
+        and (
+            document.metadata_review_status != "approved"
+            or not document.metadata_reviewed
+        )
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Only approved metadata can be synchronized "
+                "to Qdrant. Use force=true only for an "
+                "intentional administrative synchronization."
+            ),
+        )
+
+    try:
+        result = sync_document_metadata_to_qdrant(
+            document=document,
+            collection_name=settings.default_collection,
+            create_payload_indexes=(
+                request.create_payload_indexes
+            ),
+        )
+
+        return DocumentQdrantSyncResponse(
+            **result
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(error),
+        ) from error
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Failed to synchronize metadata to Qdrant: "
                 f"{type(error).__name__}: {error}"
             ),
         ) from error

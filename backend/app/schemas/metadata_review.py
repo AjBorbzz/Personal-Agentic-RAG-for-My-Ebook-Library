@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field
 from app.schemas.document import DocumentResponse
 from app.schemas.document_enrichment import EnrichedBookMetadata
 
+from app.schemas.document_qdrant_sync import (
+    DocumentQdrantSyncResponse,
+)
 
 class StageMetadataCandidateRequest(BaseModel):
     overwrite_existing: bool = False
@@ -58,6 +61,8 @@ class MetadataReviewRequest(BaseModel):
         max_length=4000,
     )
 
+    sync_to_qdrant: bool = True
+
 
 class MetadataReviewResponse(BaseModel):
     document_id: str
@@ -71,3 +76,6 @@ class MetadataReviewResponse(BaseModel):
     proposed_updates: dict[str, Any]
 
     document: DocumentResponse
+
+    qdrant_sync: DocumentQdrantSyncResponse | None = None
+    warnings: list[str] = Field(default_factory=list)
