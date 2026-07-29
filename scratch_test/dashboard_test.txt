@@ -1,3 +1,42 @@
 Phase 12H ingestion dashboard test.
 
 This file should move from queued to running, indexing, and completed.
+
+
+curl -X POST \
+  "http://localhost:8000/documents/7864cc7f-f321-4fca-99f7-c2c474ae4c6b/sync-qdrant" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "force": false,
+    "create_payload_indexes": true
+  }'
+
+
+  curl -X PATCH \
+  "http://localhost:8000/documents/7864cc7f-f321-4fca-99f7-c2c474ae4c6b/metadata-review" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "approve",
+    "overwrite_existing": false,
+    "sync_to_qdrant": true,
+    "review_notes": "Reviewed and synchronized."
+  }'
+
+  curl -X POST \
+  "http://localhost:6333/collections/ebooks_general/points/scroll" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filter": {
+      "must": [
+        {
+          "key": "document_id",
+          "match": {
+            "value": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b"
+          }
+        }
+      ]
+    },
+    "limit": 3,
+    "with_payload": true,
+    "with_vector": false
+  }'

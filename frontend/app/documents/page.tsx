@@ -43,6 +43,10 @@ type DocumentRecord = {
   ingested_at: string;
   created_at: string;
   updated_at: string;
+
+  metadata_review_status: string;
+  metadata_reviewed: boolean;
+  metadata_confidence: number | null;
 };
 
 type DeprecateRequest = {
@@ -88,6 +92,7 @@ function StatusBadge({ document }: { document: DocumentRecord }) {
     return (
       <span className="rounded-full border border-yellow-700 bg-yellow-950 px-2 py-1 text-xs text-yellow-300">
         Deprecated
+        Metadata: {document.metadata_review_status}
       </span>
     );
   }
@@ -96,6 +101,7 @@ function StatusBadge({ document }: { document: DocumentRecord }) {
     return (
       <span className="rounded-full border border-green-700 bg-green-950 px-2 py-1 text-xs text-green-300">
         Active
+        Metadata: {document.metadata_review_status}
       </span>
     );
   }
@@ -103,6 +109,7 @@ function StatusBadge({ document }: { document: DocumentRecord }) {
   return (
     <span className="rounded-full border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-300">
       Inactive
+      Metadata: {document.metadata_review_status}
     </span>
   );
 }
@@ -294,6 +301,13 @@ export default function DocumentsPage() {
                       {document.filename || "Unknown file"}
                     </p>
                   </div>
+
+                  <Link
+                    href={`/documents/${document.document_id}/metadata`}
+                          className="rounded-lg border border-blue-800 px-3 py-1.5 text-xs text-blue-300"
+                        >
+                          Review Metadata
+                  </Link>
 
                   <button
                     onClick={() => deprecateDocument(document.document_id)}

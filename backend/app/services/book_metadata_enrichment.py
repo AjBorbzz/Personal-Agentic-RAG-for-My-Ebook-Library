@@ -8,7 +8,10 @@ from app.retrieval.book_metadata_prompt import (
     build_book_metadata_prompt,
 )
 from app.schemas.document_enrichment import EnrichedBookMetadata
-from app.services.ollama import generate_text
+# from app.services.ollama import generate_text
+from app.services.ollama import generate_structured_text
+from pydantic import ValidationError
+import asyncio
 
 
 ENRICHABLE_FIELDS = (
@@ -337,11 +340,21 @@ async def generate_metadata_candidate(
         source_text=source_sample,
     )
 
-    raw_response = await generate_text(prompt)
+    try:
+        raw_response = await asyncio.wait_for(generate_structured_text(
+            prompt=prompt,
+            json_schema=EnrichedBookMetadata.model_json_schema(),
+        ), timeout=180)
 
-    parsed = _extract_json_object(raw_response)
+        candidate = EnrichedBookMetadata.model_validate_json(
+            raw_response
+        )
 
-    candidate = EnrichedBookMetadata.model_validate(parsed)
+    except ValidationError as error:
+        raise ValueError(
+            "Ollama returned JSON, but it did not match the "
+            f"metadata schema: {error}"
+        ) from error
 
     candidate = _normalize_candidate(candidate)
 

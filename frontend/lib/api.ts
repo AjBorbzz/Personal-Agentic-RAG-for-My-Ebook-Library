@@ -2,7 +2,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
   
-  export async function apiGet<T>(path: string): Promise<T> {
+  export async function apiGet<TResponse>(path: string): Promise<TResponse> {
     console.log("API_BASE_URL:", API_BASE_URL);
     console.log("Request URL:", `${API_BASE_URL}${path}`);
     const response = await fetch(`${API_BASE_URL}${path}`, {
