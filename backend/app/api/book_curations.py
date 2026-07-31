@@ -22,6 +22,21 @@ from app.services.book_curator_evaluation import (
     generate_book_evaluation_candidate,
 )
 
+from datetime import datetime, timezone
+
+from pydantic import ValidationError
+
+from app.schemas.book_curation_review import (
+    BookCurationReviewRequest,
+    BookCurationReviewResponse,
+    BookCurationReviewStateResponse,
+)
+from app.schemas.book_evaluation import BookEvaluationCandidate
+from app.services.book_curator_evaluation import (
+    apply_evaluation_candidate,
+    normalize_candidate,
+)
+
 router = APIRouter(
     prefix="/book-curations",
     tags=["book-curations"],
@@ -369,6 +384,192 @@ async def generate_book_evaluation(document_id: str,request: GenerateBookEvaluat
             status_code=500,
             detail=(
                 "Failed to generate book evaluation: "
+                f"{type(error).__name__}: {error}"
+            ),
+        ) from error
+
+
+@router.get(
+    "/{document_id}/review",
+    response_model=BookCurationReviewStateResponse,
+)
+def get_book_curation_review(
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+    curation = db.scalar(
+        select(BookCuration).where(
+            BookCuration.document_id == document_id
+        )
+    )
+
+    if not curation:
+        raise HTTPException(
+            status_code=404,
+            detail="Book curation record not found.",
+        )
+
+    candidate = None
+
+    if curation.evaluation_candidate:
+        try:
+            candidate = BookEvaluationCandidate.model_validate(
+                curation.evaluation_candidate
+            )
+        except ValidationError as error:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "The stored evaluation candidate is invalid: "
+                    f"{error}"
+                ),
+            ) from error
+
+    return BookCurationReviewStateResponse(
+        document_id=curation.document_id,
+        evaluation_status=curation.evaluation_status,
+        evaluation_version=curation.evaluation_version,
+        candidate=candidate,
+        evaluation_source=curation.evaluation_source,
+        evaluation_model=curation.evaluation_model,
+        evaluation_error=curation.evaluation_error,
+        confidence=curation.confidence,
+        evaluated_at=curation.evaluated_at,
+        reviewed_at=curation.reviewed_at,
+        review_notes=curation.review_notes,
+        curation=curation,
+    )
+
+@router.patch(
+    "/{document_id}/review",
+    response_model=BookCurationReviewResponse,
+)
+def review_book_curation(
+    document_id: str,
+    request: BookCurationReviewRequest,
+    db: Session = Depends(get_db),
+):
+    curation = db.scalar(
+        select(BookCuration).where(
+            BookCuration.document_id == document_id
+        )
+    )
+
+    if not curation:
+        raise HTTPException(
+            status_code=404,
+            detail="Book curation record not found.",
+        )
+
+    if not curation.evaluation_candidate:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This book does not have an evaluation candidate. "
+                "Generate an evaluation first."
+            ),
+        )
+
+    if curation.evaluation_status == "generating":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The evaluation is still being generated and "
+                "cannot be reviewed yet."
+            ),
+        )
+
+    try:
+        if request.edited_candidate is not None:
+            candidate = normalize_candidate(
+                request.edited_candidate
+            )
+        else:
+            candidate = BookEvaluationCandidate.model_validate(
+                curation.evaluation_candidate
+            )
+            candidate = normalize_candidate(candidate)
+
+        reviewed_at = datetime.now(timezone.utc)
+
+        if request.action == "reject":
+            curation.evaluation_status = "rejected"
+            curation.review_notes = request.review_notes
+            curation.reviewed_at = reviewed_at
+            curation.evaluation_error = None
+
+            # Preserve the candidate for audit.
+            curation.evaluation_candidate = (
+                candidate.model_dump()
+            )
+
+            db.commit()
+            db.refresh(curation)
+
+            return BookCurationReviewResponse(
+                document_id=curation.document_id,
+                action="reject",
+                evaluation_status="rejected",
+                applied=False,
+                updated_fields=[],
+                candidate=candidate,
+                review_notes=curation.review_notes,
+                reviewed_at=reviewed_at,
+                curation=curation,
+            )
+
+        updated_fields = apply_evaluation_candidate(
+            curation=curation,
+            candidate=candidate,
+        )
+
+        curation.evaluation_status = "approved"
+        curation.review_notes = request.review_notes
+        curation.reviewed_at = reviewed_at
+        curation.evaluation_error = None
+
+        if curation.evaluation_source == "llm":
+            curation.evaluation_source = "llm_reviewed"
+        elif not curation.evaluation_source:
+            curation.evaluation_source = "manual_reviewed"
+
+        db.commit()
+        db.refresh(curation)
+
+        return BookCurationReviewResponse(
+            document_id=curation.document_id,
+            action="approve",
+            evaluation_status="approved",
+            applied=True,
+            updated_fields=updated_fields,
+            candidate=candidate,
+            review_notes=curation.review_notes,
+            reviewed_at=reviewed_at,
+            curation=curation,
+        )
+
+    except ValidationError as error:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "The evaluation candidate is invalid: "
+                f"{error}"
+            ),
+        ) from error
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except Exception as error:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Book curation review failed: "
                 f"{type(error).__name__}: {error}"
             ),
         ) from error

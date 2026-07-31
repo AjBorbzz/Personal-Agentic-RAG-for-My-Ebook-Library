@@ -20,6 +20,8 @@ from app.services.ollama import (
     generate_structured_text,
 )
 
+from app.models.book_curation import BookCuration
+
 
 def _clean_string(value: Any) -> str | None:
     if value is None:
@@ -250,3 +252,53 @@ async def generate_book_evaluation_candidate(
         len(source_sample),
         was_truncated,
     )
+
+CURATION_TRUSTED_FIELDS = (
+    "overall_score",
+    "technical_depth_score",
+    "practicality_score",
+    "freshness_score",
+    "authority_score",
+    "clarity_score",
+    "outdated_risk_score",
+    "audience_level",
+    "recommended_role",
+    "library_priority",
+    "curator_summary",
+    "unique_value",
+    "strengths",
+    "weaknesses",
+    "best_for",
+    "not_recommended_for",
+    "outdated_topics",
+    "confidence",
+)
+
+
+def apply_evaluation_candidate(
+    *,
+    curation: BookCuration,
+    candidate: BookEvaluationCandidate,
+) -> list[str]:
+    """
+    Normalize and apply an approved evaluation candidate to the
+    trusted BookCuration fields.
+
+    The overall score is always recalculated by the backend.
+    """
+
+    normalized_candidate = normalize_candidate(candidate)
+
+    candidate_data = normalized_candidate.model_dump()
+
+    updated_fields: list[str] = []
+
+    for field_name in CURATION_TRUSTED_FIELDS:
+        value = candidate_data.get(field_name)
+
+        setattr(curation, field_name, value)
+        updated_fields.append(field_name)
+
+    curation.evaluation_candidate = candidate_data
+
+    return updated_fields
