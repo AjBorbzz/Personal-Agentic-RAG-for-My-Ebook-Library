@@ -243,3 +243,8 @@ class BookCuration(Base):
         onupdate=utc_now,
         nullable=False,
     )
+
+    evaluation_error: Mapped[str | None] = mapped_column(
+    Text,
+    nullable=True,
+)

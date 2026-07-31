@@ -146,3 +146,5 @@ class BookCurationResponse(BaseModel):
     reviewed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+    evaluation_error: str | None
