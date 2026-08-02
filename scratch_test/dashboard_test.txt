@@ -112,3 +112,97 @@ curl \
       "confidence": 0.95
     }
   }'
+
+
+
+  cat > scratch_test/backend_architecture_v2.txt <<'EOF'
+Reliable Backend Architecture
+Author: AJ Test
+Second Edition
+Published 2026
+
+A reliable backend uses clear service boundaries, PostgreSQL transactions,
+Redis caching, API validation, automated testing, observability, and secure
+authentication. FastAPI applications should separate routers, services,
+repositories, and domain models.
+
+The second edition adds background workers, event-driven architecture,
+distributed tracing, idempotency, and production deployment guidance.
+EOF
+
+curl -X PATCH \
+  "http://localhost:8000/documents/28134b33-8ed4-4ea2-992d-68bc2383d7c6" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Reliable Backend Architecture",
+    "author": "AJ Test",
+    "edition": "First Edition",
+    "publication_year": 2023,
+    "topics": [
+      "backend architecture",
+      "api design",
+      "reliability"
+    ],
+    "technologies": [
+      "fastapi",
+      "postgresql",
+      "redis"
+    ]
+  }'
+
+
+curl -X PATCH \
+  "http://localhost:8000/documents/3fe57f26-c753-4c03-8be6-dc78b70c5356" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Reliable Backend Architecture",
+    "author": "AJ Test",
+    "edition": "Second Edition",
+    "publication_year": 2026,
+    "topics": [
+      "backend architecture",
+      "api design",
+      "reliability"
+    ],
+    "technologies": [
+      "fastapi",
+      "postgresql",
+      "redis"
+    ]
+  }'
+
+
+  curl -X POST \
+  "http://localhost:8000/book-relationships/scan/3fe57f26-c753-4c03-8be6-dc78b70c5356" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "max_comparisons": 100,
+    "include_inactive": false,
+    "include_deprecated": true,
+    "content_sample_characters": 30000,
+    "shingle_size": 5,
+    "minimum_confidence": 0.55
+  }'
+
+
+  3fe57f26-c753-4c03-8be6-dc78b70c5356
+
+
+  curl \
+  "http://localhost:8000/book-relationships?document_id=3fe57f26-c753-4c03-8be6-dc78b70c5356"
+
+
+  2f194329-bb8d-41c4-b370-fb7a11b1d874
+
+
+  curl -X PATCH \
+  "http://localhost:8000/book-relationships/2f194329-bb8d-41c4-b370-fb7a11b1d874/review" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "approve",
+    "relationship_type": "different_edition",
+    "recommended_primary_document_id": "3fe57f26-c753-4c03-8be6-dc78b70c5356",
+    "recommended_superseded_document_id": "28134b33-8ed4-4ea2-992d-68bc2383d7c6",
+    "recommended_action": "deprecate_older",
+    "review_notes": "Confirmed that this is the newer edition."
+  }'

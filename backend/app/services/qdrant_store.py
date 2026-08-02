@@ -359,6 +359,37 @@ DOCUMENT_METADATA_INDEXES = {
     "metadata_source": PayloadSchemaType.KEYWORD,
     "metadata_review_status": PayloadSchemaType.KEYWORD,
     "metadata_reviewed": PayloadSchemaType.BOOL,
+
+    "curation_status": PayloadSchemaType.KEYWORD,
+    "curator_overall_score": PayloadSchemaType.FLOAT,
+    "curator_rank_score": PayloadSchemaType.FLOAT,
+
+    "curator_technical_depth_score":
+        PayloadSchemaType.FLOAT,
+
+    "curator_practicality_score":
+        PayloadSchemaType.FLOAT,
+
+    "curator_freshness_score":
+        PayloadSchemaType.FLOAT,
+
+    "curator_authority_score":
+        PayloadSchemaType.FLOAT,
+
+    "curator_clarity_score":
+        PayloadSchemaType.FLOAT,
+
+    "curator_outdated_risk_score":
+        PayloadSchemaType.FLOAT,
+
+    "curator_audience_level":
+        PayloadSchemaType.KEYWORD,
+
+    "curator_recommended_role":
+        PayloadSchemaType.KEYWORD,
+
+    "curator_library_priority":
+        PayloadSchemaType.KEYWORD,
 }
 
 

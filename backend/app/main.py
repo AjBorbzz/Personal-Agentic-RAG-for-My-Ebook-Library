@@ -18,6 +18,7 @@ from app.api import documents
 from app.api import ingestion_jobs
 from app.api.book_curations import router as book_curations_router
 from app.api.book_relationships import router as book_relationships_router
+from app.api.book_rankings import router as book_rankings_router
 
 
 app = FastAPI(
@@ -54,3 +55,4 @@ app.include_router(documents.router)
 app.include_router(ingestion_jobs.router)
 app.include_router(book_curations_router)
 app.include_router(book_relationships_router)
+app.include_router(book_rankings_router)
