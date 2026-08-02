@@ -3,40 +3,112 @@ Phase 12H ingestion dashboard test.
 This file should move from queued to running, indexing, and completed.
 
 
-curl -X POST \
-  "http://localhost:8000/documents/7864cc7f-f321-4fca-99f7-c2c474ae4c6b/sync-qdrant" \
+curl -X PATCH \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79" \
   -H "Content-Type: application/json" \
   -d '{
-    "force": false,
-    "create_payload_indexes": true
+    "evaluation_status": "pending",
+    "overall_score": 88,
+    "technical_depth_score": 92,
+    "practicality_score": 80,
+    "freshness_score": 85,
+    "authority_score": 90,
+    "clarity_score": 82,
+    "outdated_risk_score": 10,
+    "audience_level": "advanced",
+    "recommended_role": "reference",
+    "library_priority": "essential",
+    "curator_summary": "A deep technical reference with strong long-term value.",
+    "strengths": [
+      "deep technical coverage",
+      "strong conceptual explanations"
+    ],
+    "weaknesses": [
+      "limited beginner guidance"
+    ],
+    "best_for": [
+      "experienced backend engineers",
+      "system architects"
+    ],
+    "confidence": 1.0,
+    "evaluation_source": "manual"
   }'
+
+
+  curl -X POST \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79/evaluate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "max_source_characters": 12000
+  }'
+
+
+  curl \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79"
+
+
+  curl -X POST \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79/evaluate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "max_source_characters": 12000
+  }'
+
+  curl \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79/review"
 
 
   curl -X PATCH \
-  "http://localhost:8000/documents/7864cc7f-f321-4fca-99f7-c2c474ae4c6b/metadata-review" \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79/review" \
   -H "Content-Type: application/json" \
   -d '{
     "action": "approve",
-    "overwrite_existing": false,
-    "sync_to_qdrant": true,
-    "review_notes": "Reviewed and synchronized."
+    "review_notes": "Reviewed and accepted."
   }'
 
-  curl -X POST \
-  "http://localhost:6333/collections/ebooks_general/points/scroll" \
+curl \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79"
+
+
+  curl -X PATCH \
+  "http://localhost:8000/book-curations/2ef60837-dee6-467a-a469-5ac1017e3e79/review" \
   -H "Content-Type: application/json" \
   -d '{
-    "filter": {
-      "must": [
-        {
-          "key": "document_id",
-          "match": {
-            "value": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b"
-          }
-        }
-      ]
-    },
-    "limit": 3,
-    "with_payload": true,
-    "with_vector": false
+    "action": "approve",
+    "review_notes": "Adjusted freshness and outdated-risk scores after manual review.",
+    "edited_candidate": {
+      "overall_score": 0,
+      "technical_depth_score": 90,
+      "practicality_score": 82,
+      "freshness_score": 70,
+      "authority_score": 88,
+      "clarity_score": 84,
+      "outdated_risk_score": 28,
+      "audience_level": "advanced",
+      "recommended_role": "reference",
+      "library_priority": "high",
+      "curator_summary": "A technically deep reference with lasting conceptual value, although some implementation guidance may require current documentation.",
+      "unique_value": "Strong explanations of architectural concepts and tradeoffs.",
+      "strengths": [
+        "deep technical coverage",
+        "strong architectural reasoning",
+        "clear treatment of tradeoffs"
+      ],
+      "weaknesses": [
+        "some implementation examples may age",
+        "not designed for complete beginners"
+      ],
+      "best_for": [
+        "backend engineers",
+        "system architects",
+        "advanced learners"
+      ],
+      "not_recommended_for": [
+        "readers seeking a quick beginner tutorial"
+      ],
+      "outdated_topics": [
+        "older framework examples"
+      ],
+      "confidence": 0.95
+    }
   }'

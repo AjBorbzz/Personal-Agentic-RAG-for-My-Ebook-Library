@@ -1,89 +1,130 @@
 {
-	"result": {
-		"points": [
-			{
-				"id": "16aeea9f-f203-5c84-9102-1f525572ed45",
-				"payload": {
-					"document_id": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b",
-					"filename": "dashboard_test.txt",
-					"title": "7864cc7f-f321-4fca-99f7-c2c474ae4c6b_dashboard_test",
-					"chunk_text": "Phase 12H ingestion dashboard test.\n\nThis file should move from queued to running, indexing, and completed.",
-					"file_type": "txt",
-					"primary_domain": "system_architecture",
-					"domains": [
-						"system_architecture",
-						"databases"
-					],
-					"domain_scores": {
-						"cloud_computing": 0,
-						"data_engineering": 0,
-						"ai_ml": 0,
-						"cybersecurity": 0,
-						"devops": 0,
-						"backend_development": 0,
-						"system_architecture": 1,
-						"linux_systems": 0,
-						"databases": 1,
-						"networking": 0,
-						"distributed_systems": 0
-					},
-					"source_type": "notes",
-					"tool_name": "personal-rag",
-					"tool_version": "1.1",
-					"version_major": 1,
-					"version_minor": 1,
-					"publication_year": 2026,
-					"text": "Phase 12H ingestion dashboard test.\n\nThis file should move from queued to running, indexing, and completed.",
-					"content_hash": "a13abf39be1ff778eb930916bd75c3c75b59a4bf7440fdb336cf4fdd493b69b4",
-					"is_active": false,
-					"is_deprecated": true,
-					"char_end": 107,
-					"ingested_at": "2026-07-25T20:38:49.760479+00:00",
-					"chunk_index": 0,
-					"page_number": null,
-					"page_start": null,
-					"page_end": null,
-					"page_numbers": [
-
-					],
-					"char_start": 0,
-					"subtitle": "Building Reliable Data-Intensive Systems",
-					"publisher": "Example Publisher",
-					"edition": "2nd Edition",
-					"language": "en",
-					"description": "This file is part of a dashboard test for ingestion processes, tracking the status from queued to running, indexing, and completed phases.",
-					"difficulty_level": "advanced",
-					"topics": [
-						"replication",
-						"partitioning",
-						"consensus"
-					],
-					"technologies": [
-						"postgresql",
-						"distributed-databases"
-					],
-					"tags": [
-						"distributed-systems",
-						"data-engineering",
-						"system-design"
-					],
-					"prerequisite_skills": [
-						"databases",
-						"backend-development"
-					],
-					"metadata_source": "llm_reviewed",
-					"metadata_confidence": 0.95,
-					"metadata_reviewed": true,
-					"metadata_review_status": "approved",
-					"metadata_reviewed_at": "2026-07-27T21:11:41.073864+00:00",
-					"enriched_at": "2026-07-27T21:11:41.073864+00:00",
-					"document_metadata_schema_version": 1,
-					"document_metadata_synced_at": "2026-07-27T21:11:41.090662+00:00"
-				}
-			}
+	"curation_id": "ad31c438-4257-4dcc-ad9f-ca713e8e0af6",
+	"document_id": "2ef60837-dee6-467a-a469-5ac1017e3e79",
+	"evaluation_status": "pending",
+	"overall_score": 88.0,
+	"technical_depth_score": 92.0,
+	"practicality_score": 80.0,
+	"freshness_score": 85.0,
+	"authority_score": 90.0,
+	"clarity_score": 82.0,
+	"outdated_risk_score": 10.0,
+	"audience_level": "advanced",
+	"recommended_role": "reference",
+	"library_priority": "essential",
+	"curator_summary": "A deep technical reference with strong long-term value.",
+	"unique_value": null,
+	"strengths": [
+		"deep technical coverage",
+		"strong conceptual explanations"
+	],
+	"weaknesses": [
+		"limited beginner guidance"
+	],
+	"best_for": [
+		"experienced backend engineers",
+		"system architects"
+	],
+	"not_recommended_for": null,
+	"outdated_topics": null,
+	"evaluation_source": "llm",
+	"evaluation_model": "qwen3:8b",
+	"evaluation_version": 1,
+	"confidence": 0.5,
+	"metadata_snapshot": {
+		"document_id": "2ef60837-dee6-467a-a469-5ac1017e3e79",
+		"filename": "Python Web Scraping - 2E (2017).pdf",
+		"title": "2ef60837-dee6-467a-a469-5ac1017e3e79_Python_Web_Scraping_-_2E_(2017)",
+		"author": "Katharine Jarmul, Richard Lawson",
+		"subtitle": "Fetching Data From the Web",
+		"publisher": "Packt",
+		"edition": "2nd",
+		"publication_year": 2023,
+		"language": "English",
+		"primary_domain": "databases",
+		"domains": [
+			"databases",
+			"backend_development",
+			"ai_ml"
 		],
-		"next_page_offset": null
+		"difficulty_level": "intermediate",
+		"topics": [
+			"web scraping",
+			"crawling",
+			"scrapy",
+			"selenium",
+			"beautifulsoup",
+			"dynamic content",
+			"captcha solving",
+			"performance optimization",
+			"legal considerations",
+			"data storage"
+		],
+		"technologies": [
+
+		],
+		"tags": [
+			"web scraping",
+			"crawling",
+			"scrapy",
+			"selenium",
+			"beautifulsoup",
+			"dynamic content",
+			"captcha",
+			"performance",
+			"data storage"
+		],
+		"prerequisite_skills": [
+			"basic python",
+			"html/css",
+			"http basics"
+		],
+		"source_type": null,
+		"tool_name": null,
+		"tool_version": null,
+		"version_major": null,
+		"version_minor": null,
+		"is_active": true,
+		"is_deprecated": false,
+		"metadata_source": "llm_reviewed",
+		"metadata_confidence": 0.95,
+		"metadata_reviewed": true,
+		"metadata_review_status": "approved"
 	},
-	"status": "ok",
-	"time": 0.006503
+	"evaluation_candidate": {
+		"overall_score": 18.6,
+		"technical_depth_score": 9.8,
+		"practicality_score": 9.5,
+		"freshness_score": 9.7,
+		"authority_score": 9.6,
+		"clarity_score": 9.4,
+		"outdated_risk_score": 0.2,
+		"audience_level": "advanced",
+		"recommended_role": "reference",
+		"library_priority": "high",
+		"curator_summary": "This content provides an in-depth exploration of concurrent and parallel web scraping techniques using Python, with a focus on threading and multiprocessing. It includes practical examples of implementing threaded crawlers with queues, multiprocessing with multiple processes, and performance comparisons. The material is highly technical and suitable for advanced developers looking to optimize web scraping workflows. The content is well-structured and includes code examples, making it an excellent reference for those working on large-scale web scraping projects. The information is up-to-date and relevant, with a strong emphasis on performance optimization and scalability. The audience is likely to be developers with experience in Python and web scraping, seeking to enhance their skills in concurrent programming and distributed crawling. The content is recommended as a reference for advanced web scraping tasks and is likely to be used by developers working on complex scraping projects that require high performance and scalability.",
+		"unique_value": null,
+		"strengths": [
+
+		],
+		"weaknesses": [
+
+		],
+		"best_for": [
+
+		],
+		"not_recommended_for": [
+
+		],
+		"outdated_topics": [
+
+		],
+		"confidence": 0.5
+	},
+	"review_notes": null,
+	"evaluated_at": "2026-07-31T15:34:25.635143Z",
+	"reviewed_at": null,
+	"created_at": "2026-07-31T14:42:02.781203Z",
+	"updated_at": "2026-07-31T15:34:25.641179Z",
+	"evaluation_error": null
 }

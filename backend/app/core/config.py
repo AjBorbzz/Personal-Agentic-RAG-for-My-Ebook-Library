@@ -7,6 +7,7 @@ class Settings(BaseModel):
     ollama_url: str = "http://localhost:11434"
     qdrant_url: str = "http://localhost:6333"
     llm_model: str = "qwen3:8b"
+    book_curator: str = "gemma4:12b"
     embedding_model: str = "nomic-embed-text"
     default_collection: str = "ebooks_general"
 
