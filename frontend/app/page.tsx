@@ -18,6 +18,12 @@ const tools = [
     "View registered documents, versions, active status, and deprecated sources.",
   href: "/documents",
 },
+{
+  title: "Book Curator",
+  description:
+    "Evaluate book quality, rank recommended sources, review duplicate editions, and manage library priorities.",
+  href: "/book-curator",
+},
   {
     title: "Semantic Search",
     description: "Inspect retrieved chunks directly before LLM generation.",
