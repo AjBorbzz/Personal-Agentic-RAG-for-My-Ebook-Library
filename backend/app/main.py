@@ -21,6 +21,7 @@ from app.api.book_relationships import router as book_relationships_router
 from app.api.book_rankings import router as book_rankings_router
 from app.api.book_curator_dashboard import router as book_curator_dashboard_router
 from app.api.skill_taxonomy import router as skill_taxonomy_router
+from app.api.skill_taxonomy_management import router as skill_taxonomy_management_router
 
 
 app = FastAPI(
@@ -60,3 +61,4 @@ app.include_router(book_relationships_router)
 app.include_router(book_rankings_router)
 app.include_router(book_curator_dashboard_router)
 app.include_router(skill_taxonomy_router)
+app.include_router(skill_taxonomy_management_router)
