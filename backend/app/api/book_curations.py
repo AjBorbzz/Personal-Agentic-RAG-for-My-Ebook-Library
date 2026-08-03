@@ -93,10 +93,7 @@ def initialize_book_curation(
     return curation
 
 
-@router.get(
-    "",
-    response_model=list[BookCurationResponse],
-)
+@router.get("",response_model=list[BookCurationResponse])
 def list_book_curations(
     db: Session = Depends(get_db),
     evaluation_status: str | None = Query(default=None),
@@ -198,11 +195,8 @@ async def generate_book_evaluation(document_id: str,request: GenerateBookEvaluat
             detail="Document not found.",
         )
 
-    curation = db.scalar(
-        select(BookCuration).where(
-            BookCuration.document_id == document_id
-        )
-    )
+    curation = db.scalar(select(BookCuration)
+                 .where(BookCuration.document_id == document_id))
 
     if not curation:
         curation = BookCuration(

@@ -28,9 +28,10 @@ async def generate_text(prompt: str) -> str:
 async def generate_structured_text(
     prompt: str,
     json_schema: dict,
+    model:str = None
 ) -> str:
     payload = {
-        "model": settings.llm_model,
+        "model": model if model else settings.llm_model,
         "prompt": prompt,
         "stream": False,
         "format": json_schema,

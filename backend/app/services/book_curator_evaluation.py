@@ -223,6 +223,7 @@ async def generate_book_evaluation_candidate(
                     BookEvaluationCandidate
                     .model_json_schema()
                 ),
+                model=settings.book_curator
             ),
             timeout=300,
         )
