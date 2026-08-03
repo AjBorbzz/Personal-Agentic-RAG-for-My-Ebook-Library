@@ -11,6 +11,10 @@ from app.models.skill_taxonomy import (  # noqa: F401
     SkillDomain,
     SkillRelationship,
 )
+from app.models.book_skill_mapping import (  # noqa: F401
+    BookSkillEvidence,
+    BookSkillMapping,
+)
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
