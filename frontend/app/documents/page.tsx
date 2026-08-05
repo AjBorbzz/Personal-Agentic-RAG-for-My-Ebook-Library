@@ -308,6 +308,14 @@ export default function DocumentsPage() {
                         >
                           Review Metadata
                   </Link>
+                  <Link
+                      href={
+                        `/documents/${document.document_id}/skills`
+                      }
+                      className="rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-300 transition hover:bg-neutral-800"
+                    >
+                      Review skills
+                    </Link>
 
                   <button
                     onClick={() => deprecateDocument(document.document_id)}

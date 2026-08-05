@@ -507,6 +507,7 @@ export default function CurationReviewPage() {
               >
                 Review metadata
               </Link>
+              
             </div>
           </section>
         ) : (
