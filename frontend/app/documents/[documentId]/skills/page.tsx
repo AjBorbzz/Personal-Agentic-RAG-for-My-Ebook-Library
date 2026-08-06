@@ -663,6 +663,14 @@ export default function BookSkillReviewPage() {
               >
                 Review book
               </Link>
+              <Link
+              href="/book-skill-dashboard"
+              className={
+                SECONDARY_BUTTON_CLASS_NAME
+              }
+            >
+              Skill dashboard
+            </Link>
             </div>
           </div>
 

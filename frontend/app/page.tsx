@@ -25,6 +25,12 @@ const tools = [
     href: "/book-curator",
   },
   {
+  title: "Book-to-Skill Dashboard",
+  description:
+    "Track approved mappings, skill coverage, pending reviews, top books, and taxonomy gaps.",
+  href: "/book-skill-dashboard",
+},
+  {
     title: "Skill Taxonomy",
     description:
       "Explore technical domains, categories, skills, aliases, prerequisites, and related competencies.",
