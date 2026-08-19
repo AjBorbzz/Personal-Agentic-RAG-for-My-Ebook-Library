@@ -25,6 +25,11 @@ from app.api.skill_taxonomy_management import router as skill_taxonomy_managemen
 from app.api.book_skill_mapping_candidates import router as book_skill_mapping_candidates_router
 from app.api.book_skill_mapping_reviews import router as book_skill_mapping_reviews_router
 from app.api.book_skill_dashboard import router as book_skill_dashboard_router
+from app.api.personal_skill_profiles import (
+    evidence_router as personal_skill_evidence_router,
+    router as personal_skill_profiles_router,
+)
+
 
 app = FastAPI(
     title="Personal Agentic RAG",
@@ -67,3 +72,5 @@ app.include_router(skill_taxonomy_management_router)
 app.include_router(book_skill_mapping_candidates_router)
 app.include_router(book_skill_mapping_reviews_router)
 app.include_router(book_skill_dashboard_router)
+app.include_router(personal_skill_profiles_router)
+app.include_router(personal_skill_evidence_router)
