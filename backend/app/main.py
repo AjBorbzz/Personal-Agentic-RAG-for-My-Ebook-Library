@@ -30,6 +30,9 @@ from app.api.personal_skill_profiles import (
     router as personal_skill_profiles_router,
 )
 
+from app.api.career_targets import router as career_targets_router
+
+
 
 app = FastAPI(
     title="Personal Agentic RAG",
@@ -74,3 +77,4 @@ app.include_router(book_skill_mapping_reviews_router)
 app.include_router(book_skill_dashboard_router)
 app.include_router(personal_skill_profiles_router)
 app.include_router(personal_skill_evidence_router)
+app.include_router(career_targets_router)

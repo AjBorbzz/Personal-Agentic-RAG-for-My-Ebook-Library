@@ -7,11 +7,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.schemas.personal_skill_profile import (
+    CareerTargetCreate,
+    CareerTargetSkillSet,
     PersonalSkillEvidenceBase,
     PersonalSkillEvidenceUpdate,
     PersonalSkillProfileCreate,
     PersonalSkillProfileUpdate,
     PersonalSkillStateBase,
+)
+
+from app.models.document import Document
+from app.models.skill_taxonomy import (
+    ProficiencyLevel,
+    Skill,
 )
 
 from app.models.personal_skill_profile import (
@@ -20,11 +28,14 @@ from app.models.personal_skill_profile import (
     PersonalSkillState,
 )
 
-from app.models.document import Document
-from app.models.skill_taxonomy import (
-    ProficiencyLevel,
-    Skill,
+from app.models.personal_skill_profile import (
+    CareerTarget,
+    CareerTargetSkill,
+    PersonalSkillEvidence,
+    PersonalSkillProfile,
+    PersonalSkillState,
 )
+
 from app.schemas.personal_skill_profile import (
     PersonalSkillProfileCreate,
     PersonalSkillProfileUpdate,
@@ -894,3 +905,160 @@ def delete_skill_evidence(
         db.rollback()
         raise
 
+# ============================================================
+# Career targets
+# ============================================================
+
+
+def _get_career_target(
+    *,
+    db: Session,
+    career_target_id: UUID,
+) -> CareerTarget:
+    target = db.get(
+        CareerTarget,
+        career_target_id,
+    )
+
+    if target is None:
+        raise ValueError(
+            "Career target was not found."
+        )
+
+    return target
+
+
+def create_career_target(
+    *,
+    db: Session,
+    data: CareerTargetCreate,
+) -> CareerTarget:
+    """
+    Create a role/capability target attached to
+    one active personal profile.
+    """
+
+    _get_active_profile(
+        db,
+        data.profile_id,
+    )
+
+    try:
+        target = CareerTarget(
+            profile_id=data.profile_id,
+            role_name=data.role_name,
+            role_slug=data.role_slug,
+            description=data.description,
+            priority=data.priority,
+            status=data.status,
+            target_date=data.target_date,
+        )
+
+        db.add(target)
+
+        db.commit()
+        db.refresh(target)
+
+        return target
+
+    except IntegrityError as exc:
+        db.rollback()
+
+        raise ValueError(
+            "Career target violates a database "
+            "constraint. The role slug must be "
+            "unique within the profile."
+        ) from exc
+
+    except Exception:
+        db.rollback()
+        raise
+
+
+def set_career_target_skill(
+    *,
+    db: Session,
+    career_target_id: UUID,
+    skill_id: str,
+    data: CareerTargetSkillSet,
+) -> CareerTargetSkill:
+    """
+    Set one canonical skill requirement for
+    a career target.
+
+    PUT semantics provide deterministic upsert:
+    one requirement exists for each
+    (career_target_id, skill_id).
+    """
+
+    target = _get_career_target(
+        db=db,
+        career_target_id=career_target_id,
+    )
+
+    _get_active_profile(
+        db,
+        target.profile_id,
+    )
+
+    _get_assignable_skill(
+        db,
+        skill_id,
+    )
+
+    _get_proficiency_level(
+        db,
+        data.required_level_id,
+    )
+
+    requirement = db.scalar(
+        select(
+            CareerTargetSkill
+        ).where(
+            CareerTargetSkill.career_target_id
+            == career_target_id,
+            CareerTargetSkill.skill_id
+            == skill_id,
+        )
+    )
+
+    values = data.model_dump()
+
+    try:
+        if requirement is None:
+            requirement = CareerTargetSkill(
+                career_target_id=(
+                    career_target_id
+                ),
+                skill_id=skill_id,
+                **values,
+            )
+
+            db.add(requirement)
+
+        else:
+            for field_name, value in (
+                values.items()
+            ):
+                setattr(
+                    requirement,
+                    field_name,
+                    value,
+                )
+
+        db.commit()
+        db.refresh(requirement)
+
+        return requirement
+
+    except IntegrityError as exc:
+        db.rollback()
+
+        raise ValueError(
+            "Career target skill requirement "
+            "violates a database constraint."
+        ) from exc
+
+    except Exception:
+        db.rollback()
+        raise

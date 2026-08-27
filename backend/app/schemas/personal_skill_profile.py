@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
@@ -224,6 +224,87 @@ class PersonalSkillEvidenceRead(PersonalSkillEvidenceBase):
             "metadata",
         ),
     )
+
+    created_at: datetime
+    updated_at: datetime
+
+
+# ============================================================
+# Career targets
+# ============================================================
+
+
+CareerTargetStatus = Literal[
+    "exploring",
+    "active",
+    "paused",
+    "achieved",
+]
+
+
+class CareerTargetCreate(BaseModel):
+    profile_id: UUID
+
+    role_name: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+
+    role_slug: str = Field(
+        min_length=1,
+        max_length=160,
+    )
+
+    description: str | None = None
+
+    priority: int = Field(
+        ge=1,
+        le=5,
+    )
+
+    status: CareerTargetStatus
+
+    target_date: date | None = None
+
+
+class CareerTargetRead(CareerTargetCreate):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    career_target_id: UUID
+
+    created_at: datetime
+    updated_at: datetime
+
+
+class CareerTargetSkillSet(BaseModel):
+    required_level_id: str = Field(
+        min_length=1,
+    )
+
+    importance_weight: int = Field(
+        ge=1,
+        le=5,
+    )
+
+    is_required: bool
+
+    rationale: str | None = None
+
+
+class CareerTargetSkillRead(
+    CareerTargetSkillSet
+):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    career_target_skill_id: UUID
+
+    career_target_id: UUID
+
+    skill_id: str
 
     created_at: datetime
     updated_at: datetime
