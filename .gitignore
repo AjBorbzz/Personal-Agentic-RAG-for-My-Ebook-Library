@@ -80,3 +80,5 @@ docker-compose.override.yml
 *.pfx
 secrets/
 credentials/
+
+/MDs/
