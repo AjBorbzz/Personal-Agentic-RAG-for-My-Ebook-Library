@@ -33,7 +33,7 @@ from app.api.personal_skill_profiles import (
 from app.api.career_targets import router as career_targets_router
 from app.api.skill_gaps import router as skill_gaps_router
 from app.api.skill_recommendations import router as skill_recommendations_router
-
+from app.api.skill_intelligence_reads import router as skill_intelligence_reads_router
 
 
 app = FastAPI(
@@ -82,3 +82,4 @@ app.include_router(personal_skill_evidence_router)
 app.include_router(career_targets_router)
 app.include_router(skill_gaps_router)
 app.include_router(skill_recommendations_router)
+app.include_router(skill_intelligence_reads_router)

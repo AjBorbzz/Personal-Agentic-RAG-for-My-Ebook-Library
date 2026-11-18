@@ -80,6 +80,11 @@ const tools = [
     description: "Verify that the FastAPI backend is reachable.",
     href: "/health",
   },
+  {
+  title: "Skill Intelligence",
+  description: "Review assessed skills, career gaps, recommendations and reading progress.",
+  href: "/skill-intelligence",
+},
 
 ];
 
