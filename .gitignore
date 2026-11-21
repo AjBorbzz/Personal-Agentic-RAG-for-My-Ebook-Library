@@ -82,3 +82,6 @@ secrets/
 credentials/
 
 /MDs/
+
+# Private, from-scratch RAG learning workspace
+/personal_rag_learning_lab/

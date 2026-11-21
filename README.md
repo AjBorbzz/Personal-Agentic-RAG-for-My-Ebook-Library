@@ -1,5 +1,8 @@
 # Notes:
 
+Detailed setup and usage for the ingestion, generation, review, and migration
+utilities is available in [`scripts/README.md`](scripts/README.md).
+
 ### Run batch ingestion
 
 ```bash
