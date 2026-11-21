@@ -35,6 +35,9 @@ from app.api.skill_gaps import router as skill_gaps_router
 from app.api.skill_recommendations import router as skill_recommendations_router
 from app.api.skill_intelligence_reads import router as skill_intelligence_reads_router
 
+from app.api.evaluation import router as evaluation_router
+from app.middleware.rag_run_history import RagRunHistoryMiddleware
+
 
 app = FastAPI(
     title="Personal Agentic RAG",
@@ -83,3 +86,6 @@ app.include_router(career_targets_router)
 app.include_router(skill_gaps_router)
 app.include_router(skill_recommendations_router)
 app.include_router(skill_intelligence_reads_router)
+
+app.include_router(evaluation_router)
+app.add_middleware(RagRunHistoryMiddleware)
