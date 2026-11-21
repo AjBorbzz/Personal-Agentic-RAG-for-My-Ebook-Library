@@ -1,4 +1,3 @@
-"""Deterministic signals; never present keyword coverage as proof of grounding."""
 from __future__ import annotations
 from typing import Any
 
