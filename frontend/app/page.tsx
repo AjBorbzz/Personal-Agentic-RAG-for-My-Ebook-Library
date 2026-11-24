@@ -1,4 +1,5 @@
 import { ToolCard } from "@/components/ToolCard";
+import Link from "next/link"; 
 
 const tools = [
   {
@@ -85,7 +86,11 @@ const tools = [
   description: "Review assessed skills, career gaps, recommendations and reading progress.",
   href: "/skill-intelligence",
 },
-
+{
+  title: "RAG Evaluation",
+  description: "Benchmarks, citations, runs and quality history.",
+  href: "/evaluation",
+},
 ];
 
 export default function HomePage() {
