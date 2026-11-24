@@ -38,6 +38,7 @@ from app.api.skill_intelligence_reads import router as skill_intelligence_reads_
 from app.api.evaluation import router as evaluation_router
 from app.middleware.rag_run_history import RagRunHistoryMiddleware
 
+from app.api.portfolio import router as portfolio_router
 
 app = FastAPI(
     title="Personal Agentic RAG",
@@ -89,3 +90,5 @@ app.include_router(skill_intelligence_reads_router)
 
 app.include_router(evaluation_router)
 app.add_middleware(RagRunHistoryMiddleware)
+
+app.include_router(portfolio_router)
