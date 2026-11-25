@@ -18,9 +18,9 @@ from app.schemas.book_evaluation import (
     GenerateBookEvaluationResponse,
 )
 from app.services.book_curator_evaluation import (
-    configured_generation_model,
     generate_book_evaluation_candidate,
 )
+from app.services.ollama import OllamaStructuredOutputError
 
 from datetime import datetime, timezone
 
@@ -262,9 +262,7 @@ async def generate_book_evaluation(document_id: str,request: GenerateBookEvaluat
         curation.metadata_snapshot = metadata_snapshot
 
         curation.evaluation_source = "llm"
-        curation.evaluation_model = (
-            configured_generation_model()
-        )
+        curation.evaluation_model = settings.book_curator
         curation.confidence = candidate.confidence
 
         curation.evaluated_at = datetime.now(
@@ -337,7 +335,7 @@ async def generate_book_evaluation(document_id: str,request: GenerateBookEvaluat
             ),
         ) from error
 
-    except RuntimeError as error:
+    except (TimeoutError, OllamaStructuredOutputError) as error:
         db.rollback()
 
         failed_curation = db.scalar(
@@ -353,7 +351,7 @@ async def generate_book_evaluation(document_id: str,request: GenerateBookEvaluat
             db.commit()
 
         raise HTTPException(
-            status_code=504,
+            status_code=504 if isinstance(error, TimeoutError) else 502,
             detail=str(error),
         ) from error
 

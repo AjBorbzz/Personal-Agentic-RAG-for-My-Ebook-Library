@@ -17,10 +17,15 @@ from app.services.book_metadata_enrichment import (
     sample_document_text,
 )
 from app.services.ollama import (
+    OllamaOutputLimitError,
     generate_structured_text,
 )
 
 from app.models.book_curation import BookCuration
+
+
+EVALUATION_TIMEOUT_SECONDS = 300
+MINIMUM_EVALUATION_SOURCE_CHARACTERS = 4_000
 
 
 def _clean_string(value: Any) -> str | None:
@@ -170,24 +175,6 @@ def build_metadata_snapshot(
     }
 
 
-def configured_generation_model() -> str | None:
-    for setting_name in (
-        "ollama_model",
-        "generation_model",
-        "llm_model",
-    ):
-        value = getattr(
-            settings,
-            setting_name,
-            None,
-        )
-
-        if value:
-            return str(value)
-
-    return None
-
-
 async def generate_book_evaluation_candidate(
     *,
     document: Document,
@@ -199,40 +186,44 @@ async def generate_book_evaluation_candidate(
     bool,
 ]:
     full_text = load_document_text(document)
-
-    source_sample, was_truncated = sample_document_text(
-        full_text,
-        maximum_source_characters,
-    )
-
     metadata_snapshot = build_metadata_snapshot(document)
+    schema = BookEvaluationCandidate.model_json_schema()
 
-    prompt = build_book_curation_prompt(
-        current_year=datetime.now(
-            timezone.utc
-        ).year,
-        metadata=metadata_snapshot,
-        source_text=source_sample,
-    )
+    async def generate_from_sample(source_limit: int) -> tuple[str, int, bool]:
+        source_sample, was_truncated = sample_document_text(full_text, source_limit)
+        prompt = build_book_curation_prompt(
+            current_year=datetime.now(timezone.utc).year,
+            metadata=metadata_snapshot,
+            source_text=source_sample,
+        )
+        raw_response = await generate_structured_text(
+            prompt=prompt,
+            json_schema=schema,
+            model=settings.book_curator,
+            think=False,
+            context_window=8_192 if len(prompt) <= 18_000 else 16_384,
+            max_output_tokens=2_048,
+        )
+        return raw_response, len(source_sample), was_truncated
 
     try:
-        raw_response = await asyncio.wait_for(
-            generate_structured_text(
-                prompt=prompt,
-                json_schema=(
-                    BookEvaluationCandidate
-                    .model_json_schema()
-                ),
-                model=settings.book_curator
-            ),
-            timeout=300,
-        )
+        async with asyncio.timeout(EVALUATION_TIMEOUT_SECONDS):
+            try:
+                result = await generate_from_sample(maximum_source_characters)
+            except OllamaOutputLimitError:
+                initial_limit = min(maximum_source_characters, len(full_text.strip()))
+                if initial_limit <= MINIMUM_EVALUATION_SOURCE_CHARACTERS:
+                    raise
+                retry_limit = max(MINIMUM_EVALUATION_SOURCE_CHARACTERS, initial_limit // 2)
+                result = await generate_from_sample(retry_limit)
 
     except TimeoutError as error:
-        raise RuntimeError(
-            "Book evaluation timed out after 300 seconds."
+        raise TimeoutError(
+            f"Book evaluation timed out after {EVALUATION_TIMEOUT_SECONDS} seconds. "
+            "If another AI request is running, wait for it to finish and try again."
         ) from error
 
+    raw_response, source_characters_used, was_truncated = result
     try:
         candidate = (
             BookEvaluationCandidate
@@ -250,7 +241,7 @@ async def generate_book_evaluation_candidate(
     return (
         candidate,
         metadata_snapshot,
-        len(source_sample),
+        source_characters_used,
         was_truncated,
     )
 
