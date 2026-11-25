@@ -39,6 +39,7 @@ from app.schemas.document_qdrant_sync import (
 from app.services.document_qdrant_sync import (
     sync_document_metadata_to_qdrant,
 )
+from app.services.ollama import OllamaStructuredOutputError
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -192,6 +193,9 @@ async def enrich_document_metadata(
             status_code=422,
             detail=str(error),
         ) from error
+
+    except OllamaStructuredOutputError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
     except (ValueError, TypeError) as error:
         raise HTTPException(
@@ -349,6 +353,10 @@ async def stage_metadata_candidate(
             status_code=422,
             detail=str(error),
         ) from error
+
+    except OllamaStructuredOutputError as error:
+        db.rollback()
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
     except (ValueError, TypeError) as error:
         db.rollback()

@@ -1,7 +1,9 @@
 "use client";
 
+import { PageFrame, PageHeader } from "@/components/PageHeader";
+import { SourceCard } from "@/components/SourceCard";
+import { Field, StatusMessage } from "@/components/WorkspaceUI";
 import { useState } from "react";
-import Link from "next/link";
 import { apiPost } from "@/lib/api";
 import { MarkdownContent } from "@/components/MarkdownContent";
 
@@ -59,22 +61,6 @@ type ArchitectureReviewRequest = {
   limit: number;
 };
 
-function formatPages(source: ArchitectureReviewSource): string {
-  if (source.page_start !== null && source.page_end !== null) {
-    if (source.page_start === source.page_end) {
-      return String(source.page_start);
-    }
-
-    return `${source.page_start}-${source.page_end}`;
-  }
-
-  if (source.page_number !== null) {
-    return String(source.page_number);
-  }
-
-  return "N/A";
-}
-
 function parseCommaSeparated(value: string): string[] {
   return value
     .split(",")
@@ -92,10 +78,10 @@ export default function ArchitectureReviewPage() {
   const [goalsInput, setGoalsInput] = useState("");
   const [constraintsInput, setConstraintsInput] = useState("");
   const [reviewFocusInput, setReviewFocusInput] = useState(
-    "security, scalability, reliability, data model, API design, observability, deployment"
+    "security, scalability, reliability, data model, API design, observability, deployment",
   );
   const [targetScale, setTargetScale] = useState(
-    "single user local system with thousands of ebooks"
+    "single user local system with thousands of ebooks",
   );
   const [domainsInput, setDomainsInput] = useState("");
   const [limit, setLimit] = useState(8);
@@ -141,286 +127,246 @@ export default function ArchitectureReviewPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-neutral-100">
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <Link href="/" className="text-sm text-neutral-400 hover:text-white">
-            ← Back to dashboard
-          </Link>
+    <PageFrame>
+      <PageHeader
+        title="Architecture Review"
+        eyebrow="Portfolio"
+        description="Review a system design against your indexed books for reliability, security, scalability, and deployment risks."
+      />
 
-          <h1 className="mt-4 text-3xl font-bold">Architecture Review</h1>
-          <p className="mt-3 max-w-3xl text-neutral-400">
-            Paste a system design and review it for security, scalability,
-            reliability, data modeling, API boundaries, observability, and
-            deployment risks using your ebook-backed knowledge base.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <label className="block text-sm font-medium text-neutral-300">
-            System Description
-          </label>
-
+      <form
+        className="workspace-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submitArchitectureReview();
+        }}
+      >
+        <Field label="System description">
           <textarea
             value={systemDescription}
             onChange={(event) => setSystemDescription(event.target.value)}
             rows={7}
             placeholder="Example: A FastAPI backend with PostgreSQL, Redis, Docker, Qdrant, Ollama, and agent endpoints for RAG, learning paths, project generation, architecture review, and code review."
-            className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+            className="workspace-field"
           />
+        </Field>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Goals
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <Field label="Goals" hint="Comma-separated goals.">
               <textarea
                 value={goalsInput}
                 onChange={(event) => setGoalsInput(event.target.value)}
                 rows={3}
                 placeholder="Private ebook learning assistant, Portfolio-grade AI engineering project"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Comma-separated goals.
-              </p>
-            </div>
+            </Field>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Constraints
-              </label>
+          <div>
+            <Field label="Constraints" hint="Comma-separated constraints.">
               <textarea
                 value={constraintsInput}
                 onChange={(event) => setConstraintsInput(event.target.value)}
                 rows={3}
                 placeholder="Run locally, Avoid cloud cost, Preserve source citations"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Comma-separated constraints.
-              </p>
-            </div>
+            </Field>
           </div>
+        </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Review Focus
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <Field label="Review focus" hint="Comma-separated review areas.">
               <input
                 value={reviewFocusInput}
                 onChange={(event) => setReviewFocusInput(event.target.value)}
                 placeholder="security, scalability, reliability"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Comma-separated review areas.
-              </p>
-            </div>
+            </Field>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Target Scale
-              </label>
+          <div>
+            <Field label="Target scale">
               <input
                 value={targetScale}
                 onChange={(event) => setTargetScale(event.target.value)}
                 placeholder="single user local system with thousands of ebooks"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
           </div>
+        </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Limit
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div>
+            <Field label="Source limit">
               <input
                 type="number"
                 min={3}
                 max={20}
                 value={limit}
                 onChange={(event) => setLimit(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
+          </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-300">
-                Domains Override
-              </label>
+          <div className="md:col-span-2">
+            <Field
+              label="Domain override"
+              hint="Optional. Comma-separated domains."
+            >
               <input
                 value={domainsInput}
                 onChange={(event) => setDomainsInput(event.target.value)}
                 placeholder="backend_development, ai_ml, databases, devops, system_architecture, cybersecurity"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Optional. Comma-separated domains.
-              </p>
-            </div>
+            </Field>
           </div>
-
-          <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
-            <input
-              type="checkbox"
-              checked={autoDetectDomains}
-              onChange={(event) => setAutoDetectDomains(event.target.checked)}
-            />
-            Auto-detect domains
-          </label>
-
-          <button
-            onClick={submitArchitectureReview}
-            disabled={loading}
-            className="mt-5 rounded-xl bg-white px-5 py-2 font-medium text-black disabled:opacity-50"
-          >
-            {loading ? "Reviewing..." : "Review Architecture"}
-          </button>
         </div>
 
-        {error && (
-          <pre className="mt-6 overflow-auto rounded-xl border border-red-900 bg-red-950 p-4 text-sm text-red-200">
-            {error}
-          </pre>
-        )}
+        <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            checked={autoDetectDomains}
+            onChange={(event) => setAutoDetectDomains(event.target.checked)}
+          />
+          Auto-detect domains
+        </label>
 
-        {result && (
-          <div className="mt-8 space-y-6">
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
-                <span>Collection: {result.collection_name}</span>
-                <span>•</span>
-                <span>Sources: {result.source_count}</span>
-                <span>•</span>
-                <span>{result.elapsed_seconds}s</span>
-                <span>•</span>
-                <span>Scale: {result.target_scale}</span>
+        <button
+          type="submit"
+          disabled={loading}
+          className="workspace-button mt-5"
+        >
+          {loading ? "Reviewing..." : "Review Architecture"}
+        </button>
+      </form>
+
+      {loading && (
+        <div className="mt-5">
+          <StatusMessage tone="info">
+            Working with your ebook library…
+          </StatusMessage>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-5">
+          <StatusMessage tone="error">{error}</StatusMessage>
+        </div>
+      )}
+
+      {result && (
+        <div className="mt-8 space-y-6">
+          <section className="workspace-panel">
+            <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
+              <span>Collection: {result.collection_name}</span>
+              <span>•</span>
+              <span>Sources: {result.source_count}</span>
+              <span>•</span>
+              <span>{result.elapsed_seconds}s</span>
+              <span>•</span>
+              <span>Scale: {result.target_scale}</span>
+            </div>
+
+            <h2 className="text-xl font-semibold">Architecture Review</h2>
+            <div className="mt-4">
+              <MarkdownContent content={result.architecture_review} />
+            </div>
+          </section>
+
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Routing Metadata</h2>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Detected Domains
+                </p>
+                <p className="mt-2 text-sm">
+                  {result.detected_domains.join(", ") || "N/A"}
+                </p>
               </div>
 
-              <h2 className="text-xl font-semibold">Architecture Review</h2>
-              <div className="mt-4">
-                <MarkdownContent content={result.architecture_review} />
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Routing Metadata</h2>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Detected Domains
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {result.detected_domains.join(", ") || "N/A"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Search Domains
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {result.search_domains.join(", ") || "All"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Retrieval Attempts
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.retrieval_attempts}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Domain Filter
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.domain_filter_used ? "Used" : "Not used"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Fallback
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.fallback_used ? "Used" : "Not used"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Rewritten Query
-                  </p>
-                  <p className="mt-2 text-sm text-neutral-300">
-                    {result.rewritten_query || "Not used"}
-                  </p>
-                </div>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Search Domains
+                </p>
+                <p className="mt-2 text-sm">
+                  {result.search_domains.join(", ") || "All"}
+                </p>
               </div>
 
-              {result.router_notes.length > 0 && (
-                <div className="mt-5">
-                  <p className="text-sm font-medium text-neutral-300">
-                    Router Notes
-                  </p>
-
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-400">
-                    {result.router_notes.map((note, index) => (
-                      <li key={`${note}-${index}`}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Sources</h2>
-
-              <div className="mt-4 space-y-4">
-                {result.sources.map((source) => (
-                  <div
-                    key={`${source.source_number}-${source.chunk_index}`}
-                    className="rounded-xl border border-neutral-800 bg-neutral-950 p-4"
-                  >
-                    <div className="flex flex-wrap gap-2 text-xs text-neutral-500">
-                      <span>Source {source.source_number}</span>
-                      <span>•</span>
-                      <span>Score: {source.score.toFixed(4)}</span>
-                      <span>•</span>
-                      <span>Pages: {formatPages(source)}</span>
-                      <span>•</span>
-                      <span>Chunk: {source.chunk_index ?? "N/A"}</span>
-                    </div>
-
-                    <h3 className="mt-2 font-medium">
-                      {source.title || "Unknown title"}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-500">
-                      {source.filename || "Unknown file"}
-                    </p>
-
-                    <p className="mt-2 text-xs text-neutral-500">
-                      Domains: {(source.domains || []).join(", ") || "N/A"}
-                    </p>
-
-                    <p className="mt-3 text-sm leading-6 text-neutral-300">
-                      {source.chunk_preview}
-                    </p>
-                  </div>
-                ))}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Retrieval Attempts
+                </p>
+                <p className="mt-2 font-medium">{result.retrieval_attempts}</p>
               </div>
-            </section>
-          </div>
-        )}
-      </section>
-    </main>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Domain Filter
+                </p>
+                <p className="mt-2 font-medium">
+                  {result.domain_filter_used ? "Used" : "Not used"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Fallback
+                </p>
+                <p className="mt-2 font-medium">
+                  {result.fallback_used ? "Used" : "Not used"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Rewritten Query
+                </p>
+                <p className="mt-2 text-sm text-neutral-300">
+                  {result.rewritten_query || "Not used"}
+                </p>
+              </div>
+            </div>
+
+            {result.router_notes.length > 0 && (
+              <div className="mt-5">
+                <p className="text-sm font-medium text-neutral-300">
+                  Router Notes
+                </p>
+
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-400">
+                  {result.router_notes.map((note, index) => (
+                    <li key={`${note}-${index}`}>{note}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Sources</h2>
+
+            <div className="mt-4 space-y-4">
+              {result.sources.map((source) => (
+                <SourceCard
+                  key={`${source.source_number}-${source.chunk_index}`}
+                  source={source}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </PageFrame>
   );
 }

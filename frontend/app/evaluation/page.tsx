@@ -1,200 +1,422 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { PageFrame, PageHeader } from "@/components/PageHeader";
+import { Field, StatusMessage } from "@/components/WorkspaceUI";
+import {
+  evaluationApi,
+  type EvaluationDashboard,
+  type EvaluationResult,
+  type EvaluationRun,
+} from "@/lib/evaluation-api";
+import {
+  EvaluationResults,
+  formatRate,
+  formatRunStatus,
+} from "./EvaluationResults";
 
-type Run = {
-  evaluation_run_id: string;
-  dataset_name: string;
-  dataset_version: string;
-  status: string;
-  summary_metrics: Record<string, unknown>;
-  comparison?: { blocked?: boolean; decision?: string; delta?: Record<string, number> } | null;
+type DashboardState = {
+  revision: number;
+  data: EvaluationDashboard | null;
+  error?: string;
 };
-type Result = {
-  evaluation_result_id: string;
-  evaluation_case_id: string;
-  metrics: Record<string, unknown>;
-  failure_categories: string[];
-  passed: boolean;
-  human_groundedness: boolean | null;
-  human_relevance: boolean | null;
-  human_completeness: boolean | null;
-  answer: string | null;
-  retrieved_sources: Array<{ document_id?: string | null; page_start?: number | null; page_end?: number | null }>;
-  citations: Array<{ document_id?: string | null; page_start?: number | null; page_end?: number | null }>;
-  error_detail: string | null;
-};
-type Dashboard = {
-  recent_evaluation_runs: Run[];
-  operational_sample_size: number;
-  fallback_rate_recent: number | null;
-  weak_source_rate_recent: number | null;
-  avg_latency_ms_recent: number | null;
-  recent_errors: number;
-};
-const API = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API}${path}`, { cache: "no-store", ...init });
-  const text = await response.text();
-  const parsed: unknown = text ? JSON.parse(text) : null;
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${JSON.stringify(parsed).slice(0, 500)}`);
-  }
-  return parsed as T;
+type ResultsState = {
+  id: string;
+  revision: number;
+} & (
+  | { run: EvaluationRun; results: EvaluationResult[]; error?: undefined }
+  | { run?: undefined; results?: undefined; error: string }
+);
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
-function Metric({ label, value }: { label: string; value: unknown }) {
+function Metric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-      <div className="text-xs text-neutral-400">{label}</div>
-      <div className="mt-2 text-lg font-semibold text-neutral-100">{value == null ? "Not measured" : String(value)}</div>
+    <div className="workspace-panel min-w-0">
+      <dt className="text-sm text-neutral-400">{label}</dt>
+      <dd className="mt-2 break-words text-xl font-semibold tabular-nums text-neutral-100">
+        {value}
+      </dd>
     </div>
   );
 }
 
 export default function EvaluationPage() {
-  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardState | null>(null);
+  const [dashboardRevision, setDashboardRevision] = useState(0);
+  const [selection, setSelection] = useState({ id: "", revision: 0 });
+  const [resultsState, setResultsState] = useState<ResultsState | null>(null);
   const [dataset, setDataset] = useState("smoke");
   const [version, setVersion] = useState("v1");
   const [baseline, setBaseline] = useState("");
-  const [selected, setSelected] = useState<Run | null>(null);
-  const [results, setResults] = useState<Result[]>([]);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [notes, setNotes] = useState("Reviewed against retrieved source passages.");
+  const [notes, setNotes] = useState(
+    "Reviewed against retrieved source passages.",
+  );
+  const [action, setAction] = useState<
+    { kind: "create" } | { kind: "review"; resultId: string } | null
+  >(null);
+  const [actionError, setActionError] = useState("");
+  const [notice, setNotice] = useState("");
+  const actionRequest = useRef<AbortController | null>(null);
 
-  const reload = useCallback(async () => {
-    setDashboard(await api<Dashboard>("/evaluation-dashboard"));
-  }, []);
-  useEffect(() => { reload().catch((e: unknown) => setError(String(e))); }, [reload]);
+  const { id: selectedId, revision: resultsRevision } = selection;
+  const dashboardLoading = dashboard?.revision !== dashboardRevision;
+  const activeResults =
+    resultsState?.id === selectedId && resultsState.revision === resultsRevision
+      ? resultsState
+      : null;
 
-  async function createRun() {
-    setBusy(true); setError("");
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    evaluationApi.dashboard({ signal }).then(
+      (data) => {
+        if (!signal.aborted)
+          setDashboard({ revision: dashboardRevision, data });
+      },
+      (error: unknown) => {
+        if (!signal.aborted) {
+          setDashboard((previous) => ({
+            revision: dashboardRevision,
+            data: previous?.data ?? null,
+            error: errorMessage(
+              error,
+              "Could not load the evaluation dashboard.",
+            ),
+          }));
+        }
+      },
+    );
+
+    return () => controller.abort();
+  }, [dashboardRevision]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    Promise.all([
+      evaluationApi.run(selectedId, { signal }),
+      evaluationApi.results(selectedId, { signal }),
+    ]).then(
+      ([run, results]) => {
+        if (!signal.aborted)
+          setResultsState({
+            id: selectedId,
+            revision: resultsRevision,
+            run,
+            results,
+          });
+      },
+      (error: unknown) => {
+        if (!signal.aborted) {
+          setResultsState({
+            id: selectedId,
+            revision: resultsRevision,
+            error: errorMessage(error, "Could not load the selected run."),
+          });
+        }
+      },
+    );
+
+    return () => controller.abort();
+  }, [selectedId, resultsRevision]);
+
+  useEffect(() => () => actionRequest.current?.abort(), []);
+
+  async function runAction(
+    name: NonNullable<typeof action>,
+    request: (signal: AbortSignal) => Promise<void>,
+  ) {
+    if (actionRequest.current) return;
+
+    const controller = new AbortController();
+    actionRequest.current = controller;
+    setAction(name);
+    setActionError("");
+    setNotice("");
+
     try {
-      const run = await api<Run>("/evaluation-runs", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dataset_name: dataset, dataset_version: version, top_k: 5, max_cases: 20,
-          ...(baseline ? { baseline_run_id: baseline } : {}),
-          system_config: { label: "manual-ui-baseline" },
-        }),
-      });
-      setSelected(run);
-      setResults(await api<Result[]>(`/evaluation-runs/${run.evaluation_run_id}/results`));
-      await reload();
-    } catch (e: unknown) { setError(String(e)); }
-    finally { setBusy(false); }
-  }
-
-  async function viewRun(run: Run) {
-    setBusy(true); setError("");
-    try {
-      setSelected(run);
-      setResults(await api<Result[]>(`/evaluation-runs/${run.evaluation_run_id}/results`));
-    } catch (e: unknown) { setError(String(e)); }
-    finally { setBusy(false); }
-  }
-
-  async function review(resultId: string, approved: boolean) {
-    setBusy(true); setError("");
-    try {
-      await api(`/evaluation-results/${resultId}/review`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grounded: approved, relevant: approved,
-          complete: approved, notes }),
-      });
-      if (selected) {
-        const run = await api<Run>(`/evaluation-runs/${selected.evaluation_run_id}`);
-        setSelected(run);
-        setResults(await api<Result[]>(`/evaluation-runs/${run.evaluation_run_id}/results`));
+      await request(controller.signal);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setActionError(errorMessage(error, "The evaluation request failed."));
       }
-      await reload();
-    } catch (e: unknown) { setError(String(e)); }
-    finally { setBusy(false); }
+    } finally {
+      if (actionRequest.current === controller) {
+        actionRequest.current = null;
+        if (!controller.signal.aborted) setAction(null);
+      }
+    }
   }
+
+  function createRun(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!dataset.trim() || !version.trim()) return;
+
+    void runAction({ kind: "create" }, async (signal) => {
+      const run = await evaluationApi.start(
+        {
+          dataset_name: dataset.trim(),
+          dataset_version: version.trim(),
+          top_k: 5,
+          max_cases: 20,
+          ...(baseline.trim() ? { baseline_run_id: baseline.trim() } : {}),
+          system_config: { label: "manual-ui-baseline" },
+        },
+        { signal },
+      );
+
+      if (signal.aborted) return;
+      setSelection(({ revision }) => ({
+        id: run.evaluation_run_id,
+        revision: revision + 1,
+      }));
+      setDashboardRevision((revision) => revision + 1);
+      if (run.status === "failed") {
+        setActionError(
+          "The evaluation run failed. See the run results for details.",
+        );
+      } else {
+        setNotice("Evaluation run saved.");
+      }
+    });
+  }
+
+  function review(resultId: string, approved: boolean) {
+    if (!activeResults?.run || !notes.trim()) return;
+
+    void runAction({ kind: "review", resultId }, async (signal) => {
+      await evaluationApi.review(
+        resultId,
+        {
+          grounded: approved,
+          relevant: approved,
+          complete: approved,
+          notes: notes.trim(),
+        },
+        { signal },
+      );
+
+      if (signal.aborted) return;
+      setSelection((current) => ({
+        ...current,
+        revision: current.revision + 1,
+      }));
+      setDashboardRevision((revision) => revision + 1);
+      setNotice("Case review saved.");
+    });
+  }
+
+  const data = dashboard?.data;
+  const runs = data?.recent_evaluation_runs ?? [];
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 text-neutral-100">
-      <header>
-        <h1 className="text-2xl font-semibold">RAG Evaluation</h1>
-        <p className="mt-2 text-sm text-neutral-400">Phase 14 — dataset, retrieval metrics, human-reviewed citations, and operational traces.</p>
-      </header>
-      {error && <div role="alert" className="rounded-2xl border border-red-900 bg-neutral-900 p-4 text-red-300">{error}</div>}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-        <Metric label="RAG traces sampled" value={dashboard?.operational_sample_size} />
-        <Metric label="Fallback rate" value={dashboard?.fallback_rate_recent} />
-        <Metric label="Weak-source rate" value={dashboard?.weak_source_rate_recent} />
-        <Metric label="Mean latency (ms)" value={dashboard?.avg_latency_ms_recent} />
-      </section>
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-        <h2 className="mb-3 text-lg font-semibold">Run a versioned dataset</h2>
-        <div className="grid gap-3 md:grid-cols-4">
-          <label className="text-sm">Dataset
-            <input value={dataset} onChange={e => setDataset(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2" />
-          </label>
-          <label className="text-sm">Version
-            <input value={version} onChange={e => setVersion(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2" />
-          </label>
-          <label className="text-sm">Baseline run ID (optional)
-            <input value={baseline} onChange={e => setBaseline(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2" />
-          </label>
-          <button disabled={busy || !dataset || !version} onClick={createRun} className="self-end rounded-lg bg-white p-2 text-neutral-950 disabled:opacity-50">
-            {busy ? "Working" : "Evaluate"}
-          </button>
-        </div>
-      </section>
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-        <h2 className="mb-3 text-lg font-semibold">Recent runs</h2>
-        <div className="space-y-2">
-          {(dashboard?.recent_evaluation_runs ?? []).map(run => (
-            <button key={run.evaluation_run_id} onClick={() => viewRun(run)} disabled={busy}
-              className="block w-full rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-left text-sm hover:border-neutral-600">
-              <span className="font-medium">{run.dataset_name} / {run.dataset_version}</span>
-              <span className="ml-3 text-neutral-400">{run.status}</span>
-              <span className="ml-3 text-neutral-400">Recall@K: {String(run.summary_metrics?.avg_recall_at_k ?? "N/A")}</span>
-              {run.comparison && <span className="ml-3 text-amber-300">{run.comparison.decision}</span>}
-              <span className="mt-1 block break-all text-xs text-neutral-500">{run.evaluation_run_id}</span>
+    <PageFrame>
+      <PageHeader
+        eyebrow="Retrieval"
+        title="RAG Evaluation"
+        description="Benchmark ebook retrieval and verify the citations behind generated answers."
+        back={{ label: "Workspace", href: "/" }}
+      />
+
+      <section
+        className="space-y-3"
+        aria-labelledby="evaluation-metrics"
+        aria-busy={dashboardLoading}
+      >
+        <h2 id="evaluation-metrics" className="text-xl font-semibold">
+          Recent retrieval activity
+        </h2>
+        {dashboardLoading && !data && (
+          <StatusMessage tone="info">Loading retrieval activity…</StatusMessage>
+        )}
+        {!dashboardLoading && dashboard?.error && (
+          <StatusMessage tone="error">
+            <p className="break-words">{dashboard.error}</p>
+            <button
+              type="button"
+              className="workspace-button workspace-button--secondary mt-3"
+              onClick={() => setDashboardRevision((revision) => revision + 1)}
+            >
+              Retry dashboard
             </button>
-          ))}
-        </div>
+          </StatusMessage>
+        )}
+        {data && (
+          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Metric
+              label="RAG traces sampled"
+              value={data.operational_sample_size}
+            />
+            <Metric
+              label="Fallback rate"
+              value={formatRate(data.fallback_rate_recent)}
+            />
+            <Metric
+              label="Weak-source rate"
+              value={formatRate(data.weak_source_rate_recent)}
+            />
+            <Metric
+              label="Mean latency"
+              value={
+                data.avg_latency_ms_recent == null
+                  ? "Not measured"
+                  : `${data.avg_latency_ms_recent.toLocaleString("en")} ms`
+              }
+            />
+          </dl>
+        )}
       </section>
-      {selected && (
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-          <h2 className="text-lg font-semibold">Run detail</h2>
-          <p className="mb-3 break-all text-xs text-neutral-400">{selected.evaluation_run_id}</p>
-          <p className="mb-3 text-sm text-neutral-300">Approval status: {selected.comparison?.decision || "No baseline; establish review baseline"}</p>
-          <label className="mb-3 block text-sm">Review notes
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2" />
-          </label>
-          {results.map(item => (
-            <article key={item.evaluation_result_id} className="mb-3 space-y-2 rounded-xl border border-neutral-800 bg-neutral-950 p-3">
-              <p className="break-all text-xs text-neutral-500">Case: {item.evaluation_case_id}</p>
-              <p className="text-sm">Failures: {item.failure_categories.join(", ") || "None detected"}</p>
-              <p className="text-sm text-neutral-300">Answer: {item.answer?.slice(0, 1000) || "No answer"}</p>
-              <pre className="overflow-x-auto text-xs text-neutral-400">{JSON.stringify(item.metrics, null, 2)}</pre>
-              <details className="text-xs text-neutral-400">
-                <summary>Retrieved documents and cited pages</summary>
-                {[...(item.retrieved_sources ?? []), ...(item.citations ?? [])].map((s, i) => (
-                  <p key={i} className="mt-1">
-                    {s.document_id ? <a className="underline" href={`/documents/${encodeURIComponent(s.document_id)}`}>{s.document_id}</a> : "Unknown document"}
-                    {" — pages "}{s.page_start ?? "?"}{"–"}{s.page_end ?? "?"}
-                  </p>
-                ))}
-              </details>
-              {item.error_detail && <p className="text-sm text-red-300">{item.error_detail}</p>}
-              <div className="flex gap-2">
-                <button disabled={busy || !notes.trim()} onClick={() => review(item.evaluation_result_id, true)}
-                  className="rounded-lg border border-neutral-700 px-3 py-2 text-sm">Approve groundedness/relevance/completeness</button>
-                <button disabled={busy || !notes.trim()} onClick={() => review(item.evaluation_result_id, false)}
-                  className="rounded-lg border border-neutral-700 px-3 py-2 text-sm">Reject</button>
-                <span className="text-sm text-neutral-400">{item.passed ? "PASS" : "PENDING/FAIL"}</span>
-              </div>
-            </article>
-          ))}
-        </section>
+
+      <section
+        className="workspace-panel space-y-4"
+        aria-labelledby="evaluate-dataset"
+      >
+        <h2 id="evaluate-dataset" className="text-xl font-semibold">
+          Run a versioned dataset
+        </h2>
+        <form
+          className="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          onSubmit={createRun}
+        >
+          <Field label="Dataset">
+            <input
+              className="workspace-field"
+              value={dataset}
+              onChange={(event) => setDataset(event.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Version">
+            <input
+              className="workspace-field"
+              value={version}
+              onChange={(event) => setVersion(event.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Baseline run ID (optional)">
+            <input
+              className="workspace-field"
+              value={baseline}
+              onChange={(event) => setBaseline(event.target.value)}
+            />
+          </Field>
+          <button
+            type="submit"
+            className="workspace-button justify-center"
+            disabled={Boolean(action) || !dataset.trim() || !version.trim()}
+          >
+            {action?.kind === "create" ? "Evaluating…" : "Run evaluation"}
+          </button>
+        </form>
+      </section>
+
+      {actionError && <StatusMessage tone="error">{actionError}</StatusMessage>}
+      {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
+
+      <section
+        className="workspace-panel space-y-3"
+        aria-labelledby="recent-runs"
+        aria-busy={dashboardLoading}
+      >
+        <h2 id="recent-runs" className="text-xl font-semibold">
+          Recent runs
+        </h2>
+        {data && !runs.length && (
+          <p className="text-neutral-400">
+            No evaluation runs yet. Run a dataset to get started.
+          </p>
+        )}
+        {!data && (
+          <p className="text-neutral-400">
+            {dashboardLoading
+              ? "Loading recent runs…"
+              : "Recent runs are unavailable."}
+          </p>
+        )}
+        {runs.length > 0 && (
+          <ul className="space-y-2">
+            {runs.map((run) => (
+              <li key={run.evaluation_run_id}>
+                <button
+                  type="button"
+                  className="w-full min-w-0 rounded-lg border border-neutral-800 bg-neutral-950 p-3 text-left hover:border-neutral-500 aria-pressed:border-neutral-500 disabled:opacity-65"
+                  aria-pressed={selectedId === run.evaluation_run_id}
+                  disabled={Boolean(action)}
+                  onClick={() => {
+                    setActionError("");
+                    setNotice("");
+                    setSelection((current) =>
+                      current.id === run.evaluation_run_id
+                        ? current
+                        : {
+                            id: run.evaluation_run_id,
+                            revision: current.revision + 1,
+                          },
+                    );
+                  }}
+                >
+                  <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span className="min-w-0 break-words font-medium">
+                      {run.dataset_name} / {run.dataset_version}
+                    </span>
+                    <span className="workspace-badge">
+                      {formatRunStatus(run.status)}
+                    </span>
+                    <span className="text-sm text-neutral-400">
+                      Recall@K{" "}
+                      {formatRate(run.summary_metrics?.avg_recall_at_k)}
+                    </span>
+                  </span>
+                  <span className="mt-2 block break-all font-mono text-xs text-neutral-400">
+                    {run.evaluation_run_id}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {selectedId && !activeResults && (
+        <StatusMessage tone="info">Loading run results…</StatusMessage>
       )}
-    </main>
+      {activeResults?.error && (
+        <StatusMessage tone="error">
+          <p className="break-words">{activeResults.error}</p>
+          <button
+            type="button"
+            className="workspace-button workspace-button--secondary mt-3"
+            onClick={() =>
+              setSelection((current) => ({
+                ...current,
+                revision: current.revision + 1,
+              }))
+            }
+          >
+            Retry run results
+          </button>
+        </StatusMessage>
+      )}
+      {activeResults?.run && (
+        <EvaluationResults
+          run={activeResults.run}
+          results={activeResults.results}
+          notes={notes}
+          onNotesChange={setNotes}
+          onReview={review}
+          disabled={Boolean(action)}
+          reviewingId={action?.kind === "review" ? action.resultId : undefined}
+        />
+      )}
+    </PageFrame>
   );
 }

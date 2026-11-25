@@ -1,17 +1,25 @@
+import asyncio
 import json
 import re
 from pathlib import Path
 from typing import Any
+
+from pydantic import ValidationError
 
 from app.models.document import Document
 from app.retrieval.book_metadata_prompt import (
     build_book_metadata_prompt,
 )
 from app.schemas.document_enrichment import EnrichedBookMetadata
-# from app.services.ollama import generate_text
-from app.services.ollama import generate_structured_text
-from pydantic import ValidationError
-import asyncio
+from app.services.ollama import (
+    OllamaOutputLimitError,
+    OllamaStructuredOutputError,
+    generate_structured_text,
+)
+
+
+METADATA_TIMEOUT_SECONDS = 180
+MINIMUM_SOURCE_CHARACTERS = 4_000
 
 
 ENRICHABLE_FIELDS = (
@@ -324,41 +332,66 @@ def _existing_metadata(document: Document) -> dict[str, Any]:
 
 
 async def generate_metadata_candidate(
-            document: Document,
-            maximum_source_characters: int,
-        ) -> tuple[EnrichedBookMetadata, int, bool]:
+    document: Document,
+    maximum_source_characters: int,
+) -> tuple[EnrichedBookMetadata, int, bool]:
     full_text = load_document_text(document)
+    existing_metadata = _existing_metadata(document)
+    schema = EnrichedBookMetadata.model_json_schema()
 
-    source_sample, was_truncated = sample_document_text(
-        full_text,
-        maximum_source_characters,
-    )
-
-    prompt = build_book_metadata_prompt(
-        filename=document.filename,
-        existing_metadata=_existing_metadata(document),
-        source_text=source_sample,
-    )
+    async def generate_from_sample(source_limit: int) -> tuple[str, int, bool]:
+        source_sample, was_truncated = sample_document_text(full_text, source_limit)
+        prompt = build_book_metadata_prompt(
+            filename=document.filename,
+            existing_metadata=existing_metadata,
+            source_text=source_sample,
+        )
+        # Keep room for metadata JSON alongside large excerpts in the context window.
+        context_window = 16_384 if len(prompt) <= 32_000 else 32_768
+        raw_response = await generate_structured_text(
+            prompt=prompt,
+            json_schema=schema,
+            think=False,
+            context_window=context_window,
+            max_output_tokens=4_096,
+        )
+        return raw_response, len(source_sample), was_truncated
 
     try:
-        raw_response = await asyncio.wait_for(generate_structured_text(
-            prompt=prompt,
-            json_schema=EnrichedBookMetadata.model_json_schema(),
-        ), timeout=180)
+        async with asyncio.timeout(METADATA_TIMEOUT_SECONDS):
+            try:
+                result = await generate_from_sample(maximum_source_characters)
+            except OllamaOutputLimitError:
+                initial_source_limit = min(
+                    maximum_source_characters, len(full_text.strip())
+                )
+                if initial_source_limit <= MINIMUM_SOURCE_CHARACTERS:
+                    raise
+                retry_limit = max(MINIMUM_SOURCE_CHARACTERS, initial_source_limit // 2)
+                result = await generate_from_sample(retry_limit)
 
-        candidate = EnrichedBookMetadata.model_validate_json(
-            raw_response
+    except TimeoutError as error:
+        raise OllamaStructuredOutputError(
+            "Metadata generation timed out. Try a smaller source character limit."
+        ) from error
+    except OllamaOutputLimitError as error:
+        hint = (
+            " Try a smaller source character limit."
+            if maximum_source_characters > MINIMUM_SOURCE_CHARACTERS
+            else " Check the configured Ollama model and try again."
         )
+        raise OllamaOutputLimitError(f"{error}{hint}") from error
 
+    raw_response, source_characters_used, was_truncated = result
+    try:
+        candidate = EnrichedBookMetadata.model_validate_json(raw_response)
     except ValidationError as error:
         raise ValueError(
             "Ollama returned JSON, but it did not match the "
             f"metadata schema: {error}"
         ) from error
 
-    candidate = _normalize_candidate(candidate)
-
-    return candidate, len(source_sample), was_truncated
+    return _normalize_candidate(candidate), source_characters_used, was_truncated
 
 
 def _has_value(value: Any) -> bool:

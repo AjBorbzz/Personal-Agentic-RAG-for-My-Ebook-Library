@@ -1,7 +1,9 @@
 "use client";
 
+import { PageFrame, PageHeader } from "@/components/PageHeader";
+import { SourceCard } from "@/components/SourceCard";
+import { Field, StatusMessage } from "@/components/WorkspaceUI";
 import { useState } from "react";
-import Link from "next/link";
 import { apiPost } from "@/lib/api";
 import { MarkdownContent } from "@/components/MarkdownContent";
 
@@ -56,22 +58,6 @@ type ProjectGeneratorRequest = {
   auto_detect_domains: boolean;
   limit: number;
 };
-
-function formatPages(source: ProjectSource): string {
-  if (source.page_start !== null && source.page_end !== null) {
-    if (source.page_start === source.page_end) {
-      return String(source.page_start);
-    }
-
-    return `${source.page_start}-${source.page_end}`;
-  }
-
-  if (source.page_number !== null) {
-    return String(source.page_number);
-  }
-
-  return "N/A";
-}
 
 export default function ProjectGeneratorPage() {
   const [goal, setGoal] = useState("");
@@ -130,66 +116,58 @@ export default function ProjectGeneratorPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-neutral-100">
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <Link href="/" className="text-sm text-neutral-400 hover:text-white">
-            ← Back to dashboard
-          </Link>
+    <PageFrame>
+      <PageHeader
+        title="Project Generator"
+        eyebrow="Portfolio"
+        description="Turn an ebook-backed project goal into a plan with an architecture, milestones, and sources."
+      />
 
-          <h1 className="mt-4 text-3xl font-bold">Project Generator</h1>
-          <p className="mt-3 max-w-3xl text-neutral-400">
-            Generate portfolio-grade project plans using your indexed ebook
-            knowledge base. Useful for GitHub, resume bullets, architecture
-            planning, and interview preparation.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <label className="block text-sm font-medium text-neutral-300">
-            Project Goal
-          </label>
-
+      <form
+        className="workspace-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submitProjectGenerator();
+        }}
+      >
+        <Field label="Project goal">
           <textarea
             value={goal}
             onChange={(event) => setGoal(event.target.value)}
             rows={5}
             placeholder="Example: Design a portfolio project that combines cybersecurity, AI/ML, backend engineering, cloud, and DevOps."
-            className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+            className="workspace-field"
           />
+        </Field>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-300">
-                Target Role
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
+          <div className="md:col-span-2">
+            <Field label="Target role">
               <input
                 value={targetRole}
                 onChange={(event) => setTargetRole(event.target.value)}
                 placeholder="AI Security Engineer"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Project Level
-              </label>
+          <div>
+            <Field label="Project level">
               <select
                 value={projectLevel}
                 onChange={(event) => setProjectLevel(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               >
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
                 <option value="advanced">Advanced</option>
               </select>
-            </div>
+            </Field>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Duration Weeks
-              </label>
+          <div>
+            <Field label="Duration in weeks">
               <input
                 type="number"
                 min={1}
@@ -198,204 +176,182 @@ export default function ProjectGeneratorPage() {
                 onChange={(event) =>
                   setDurationWeeks(Number(event.target.value))
                 }
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
           </div>
+        </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Limit
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div>
+            <Field label="Source limit">
               <input
                 type="number"
                 min={3}
                 max={20}
                 value={limit}
                 onChange={(event) => setLimit(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
+          </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-300">
-                Domains Override
-              </label>
+          <div className="md:col-span-2">
+            <Field
+              label="Domain override"
+              hint="Optional. Comma-separated domains."
+            >
               <input
                 value={domainsInput}
                 onChange={(event) => setDomainsInput(event.target.value)}
                 placeholder="cybersecurity, ai_ml, backend_development, cloud_computing, devops"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Optional. Comma-separated domains.
-              </p>
-            </div>
+            </Field>
           </div>
-
-          <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
-            <input
-              type="checkbox"
-              checked={autoDetectDomains}
-              onChange={(event) => setAutoDetectDomains(event.target.checked)}
-            />
-            Auto-detect domains
-          </label>
-
-          <button
-            onClick={submitProjectGenerator}
-            disabled={loading}
-            className="mt-5 rounded-xl bg-white px-5 py-2 font-medium text-black disabled:opacity-50"
-          >
-            {loading ? "Generating..." : "Generate Project Plan"}
-          </button>
         </div>
 
-        {error && (
-          <pre className="mt-6 overflow-auto rounded-xl border border-red-900 bg-red-950 p-4 text-sm text-red-200">
-            {error}
-          </pre>
-        )}
+        <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            checked={autoDetectDomains}
+            onChange={(event) => setAutoDetectDomains(event.target.checked)}
+          />
+          Auto-detect domains
+        </label>
 
-        {result && (
-          <div className="mt-8 space-y-6">
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
-                <span>Collection: {result.collection_name}</span>
-                <span>•</span>
-                <span>Sources: {result.source_count}</span>
-                <span>•</span>
-                <span>{result.elapsed_seconds}s</span>
-                <span>•</span>
-                <span>{result.target_role}</span>
-                <span>•</span>
-                <span>{result.project_level}</span>
-                <span>•</span>
-                <span>{result.duration_weeks} weeks</span>
+        <button
+          type="submit"
+          disabled={loading}
+          className="workspace-button mt-5"
+        >
+          {loading ? "Generating..." : "Generate Project Plan"}
+        </button>
+      </form>
+
+      {loading && (
+        <div className="mt-5">
+          <StatusMessage tone="info">
+            Working with your ebook library…
+          </StatusMessage>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-5">
+          <StatusMessage tone="error">{error}</StatusMessage>
+        </div>
+      )}
+
+      {result && (
+        <div className="mt-8 space-y-6">
+          <section className="workspace-panel">
+            <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
+              <span>Collection: {result.collection_name}</span>
+              <span>•</span>
+              <span>Sources: {result.source_count}</span>
+              <span>•</span>
+              <span>{result.elapsed_seconds}s</span>
+              <span>•</span>
+              <span>{result.target_role}</span>
+              <span>•</span>
+              <span>{result.project_level}</span>
+              <span>•</span>
+              <span>{result.duration_weeks} weeks</span>
+            </div>
+
+            <h2 className="text-xl font-semibold">Generated Project Plan</h2>
+            <div className="mt-4">
+              <MarkdownContent content={result.project_plan} />
+            </div>
+          </section>
+
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Routing Metadata</h2>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Detected Domains
+                </p>
+                <p className="mt-2 text-sm">
+                  {result.detected_domains.join(", ") || "N/A"}
+                </p>
               </div>
 
-              <h2 className="text-xl font-semibold">Generated Project Plan</h2>
-              <div className="mt-4">
-                <MarkdownContent content={result.project_plan} />
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Routing Metadata</h2>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Detected Domains
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {result.detected_domains.join(", ") || "N/A"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Search Domains
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {result.search_domains.join(", ") || "All"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Retrieval Attempts
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.retrieval_attempts}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Domain Filter
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.domain_filter_used ? "Used" : "Not used"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Fallback
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.fallback_used ? "Used" : "Not used"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Rewritten Query
-                  </p>
-                  <p className="mt-2 text-sm text-neutral-300">
-                    {result.rewritten_query || "Not used"}
-                  </p>
-                </div>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Search Domains
+                </p>
+                <p className="mt-2 text-sm">
+                  {result.search_domains.join(", ") || "All"}
+                </p>
               </div>
 
-              {result.router_notes.length > 0 && (
-                <div className="mt-5">
-                  <p className="text-sm font-medium text-neutral-300">
-                    Router Notes
-                  </p>
-
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-400">
-                    {result.router_notes.map((note, index) => (
-                      <li key={`${note}-${index}`}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Sources</h2>
-
-              <div className="mt-4 space-y-4">
-                {result.sources.map((source) => (
-                  <div
-                    key={`${source.source_number}-${source.chunk_index}`}
-                    className="rounded-xl border border-neutral-800 bg-neutral-950 p-4"
-                  >
-                    <div className="flex flex-wrap gap-2 text-xs text-neutral-500">
-                      <span>Source {source.source_number}</span>
-                      <span>•</span>
-                      <span>Score: {source.score.toFixed(4)}</span>
-                      <span>•</span>
-                      <span>Pages: {formatPages(source)}</span>
-                      <span>•</span>
-                      <span>Chunk: {source.chunk_index ?? "N/A"}</span>
-                    </div>
-
-                    <h3 className="mt-2 font-medium">
-                      {source.title || "Unknown title"}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-500">
-                      {source.filename || "Unknown file"}
-                    </p>
-
-                    <p className="mt-2 text-xs text-neutral-500">
-                      Domains: {(source.domains || []).join(", ") || "N/A"}
-                    </p>
-
-                    <p className="mt-3 text-sm leading-6 text-neutral-300">
-                      {source.chunk_preview}
-                    </p>
-                  </div>
-                ))}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Retrieval Attempts
+                </p>
+                <p className="mt-2 font-medium">{result.retrieval_attempts}</p>
               </div>
-            </section>
-          </div>
-        )}
-      </section>
-    </main>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Domain Filter
+                </p>
+                <p className="mt-2 font-medium">
+                  {result.domain_filter_used ? "Used" : "Not used"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Fallback
+                </p>
+                <p className="mt-2 font-medium">
+                  {result.fallback_used ? "Used" : "Not used"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Rewritten Query
+                </p>
+                <p className="mt-2 text-sm text-neutral-300">
+                  {result.rewritten_query || "Not used"}
+                </p>
+              </div>
+            </div>
+
+            {result.router_notes.length > 0 && (
+              <div className="mt-5">
+                <p className="text-sm font-medium text-neutral-300">
+                  Router Notes
+                </p>
+
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-400">
+                  {result.router_notes.map((note, index) => (
+                    <li key={`${note}-${index}`}>{note}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Sources</h2>
+
+            <div className="mt-4 space-y-4">
+              {result.sources.map((source) => (
+                <SourceCard
+                  key={`${source.source_number}-${source.chunk_index}`}
+                  source={source}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </PageFrame>
   );
 }

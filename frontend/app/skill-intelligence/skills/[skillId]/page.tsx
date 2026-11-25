@@ -1,7 +1,10 @@
-"use client";
-import { useParams } from "next/navigation";
-import SkillWorkspace from "../../../../components/skill-intelligence/SkillWorkspace";
-export default function Page() {
-  const params = useParams<{skillId: string}>();
-  return <SkillWorkspace mode="skill" skillId={params.skillId} />;
+import SkillWorkspace from "@/components/skill-intelligence/SkillWorkspace";
+
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ skillId: string }>;
+}) {
+  const { skillId } = await params;
+  return <SkillWorkspace mode="skill" skillId={skillId} />;
 }

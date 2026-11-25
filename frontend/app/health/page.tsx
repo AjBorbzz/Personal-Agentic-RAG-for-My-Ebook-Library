@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { PageFrame, PageHeader } from "@/components/PageHeader";
+import { StatusMessage } from "@/components/WorkspaceUI";
 import { apiGet } from "@/lib/api";
 
 type HealthResponse = {
@@ -15,6 +17,7 @@ export default function HealthPage() {
   async function checkHealth() {
     setLoading(true);
     setError(null);
+    setResult(null);
 
     try {
       const data = await apiGet<HealthResponse>("/health");
@@ -28,33 +31,33 @@ export default function HealthPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-neutral-100">
-      <section className="mx-auto max-w-3xl">
-        <h1 className="text-3xl font-bold">Backend Health Check</h1>
-        <p className="mt-3 text-neutral-400">
-          Use this to confirm the Next.js frontend can reach your FastAPI backend.
-        </p>
-
+    <PageFrame width="narrow">
+      <PageHeader
+        title="Backend health"
+        description="Check the connection between this workspace and the local FastAPI service."
+      />
+      <section
+        className="workspace-panel space-y-4"
+        aria-label="Connection check"
+      >
         <button
+          type="button"
           onClick={checkHealth}
           disabled={loading}
-          className="mt-6 rounded-lg bg-white px-4 py-2 font-medium text-black disabled:opacity-50"
+          className="workspace-button"
         >
-          {loading ? "Checking..." : "Check Backend"}
+          {loading ? "Checking…" : "Check connection"}
         </button>
-
+        {loading && (
+          <StatusMessage tone="info">Connecting to FastAPI…</StatusMessage>
+        )}
         {result && (
-          <pre className="mt-6 overflow-auto rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-sm">
-            {JSON.stringify(result, null, 2)}
-          </pre>
+          <StatusMessage tone="success">
+            The backend responded with status {result.status}.
+          </StatusMessage>
         )}
-
-        {error && (
-          <pre className="mt-6 overflow-auto rounded-lg border border-red-900 bg-red-950 p-4 text-sm text-red-200">
-            {error}
-          </pre>
-        )}
+        {error && <StatusMessage tone="error">{error}</StatusMessage>}
       </section>
-    </main>
+    </PageFrame>
   );
 }

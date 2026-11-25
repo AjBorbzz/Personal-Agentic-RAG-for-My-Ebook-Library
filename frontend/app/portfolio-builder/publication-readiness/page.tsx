@@ -1,7 +1,4 @@
-import PortfolioWorkspace from "../PortfolioWorkspace";
+import PortfolioWorkspace from "@/app/portfolio-builder/PortfolioWorkspace";
 export default function Page() {
   return <PortfolioWorkspace view="readiness" />;
 }
-
-
-

@@ -1,10 +1,18 @@
-
+import json
+from copy import deepcopy
 from typing import Any
 
 import httpx
 
 from app.core.config import settings
-from copy import deepcopy
+
+
+class OllamaStructuredOutputError(RuntimeError):
+    """Ollama could not complete a structured generation request."""
+
+
+class OllamaOutputLimitError(OllamaStructuredOutputError):
+    """Ollama hit its generation limit before producing complete JSON."""
 
 
 async def generate_text(prompt: str) -> str:
@@ -29,52 +37,6 @@ async def generate_text(prompt: str) -> str:
         response.raise_for_status()
         data = response.json() 
         return data.get("response", "")
-
-# async def generate_structured_text(
-#     prompt: str,
-#     json_schema: dict,
-#     model:str = None
-# ) -> str:
-#     payload = {
-#         "model": model if model else settings.llm_model,
-#         "prompt": prompt,
-#         "stream": False,
-#         "format": json_schema,
-#         "think": False,
-#         "options": {
-#             "temperature": 0,
-#         },
-#     }
-
-#     timeout = httpx.Timeout(
-#         timeout=300.0,
-#         connect=15.0,
-#     )
-
-#     async with httpx.AsyncClient(timeout=timeout) as client:
-#         response = await client.post(
-#             f"{settings.ollama_url}/api/generate",
-#             json=payload,
-#         )
-
-#         response.raise_for_status()
-
-#         data = response.json()
-#         generated_text = data.get("response", "").strip()
-
-#         if not generated_text:
-#             done_reason = data.get("done_reason")
-#             thinking_text = data.get("thinking", "")
-
-#             raise RuntimeError(
-#                 "Ollama returned an empty structured response. "
-#                 f"done_reason={done_reason!r}, "
-#                 f"thinking_characters={len(thinking_text)}"
-#             )
-
-#         return generated_text
-
-
 
 def make_ollama_grammar_safe_schema(
     json_schema: dict[str, Any],
@@ -120,6 +82,9 @@ async def generate_structured_text(
     *,
     model: str | None = None,
     timeout_seconds: float = 300.0,
+    think: bool | None = None,
+    context_window: int = 8192,
+    max_output_tokens: int | None = None,
 ) -> str:
     selected_model = (
         model
@@ -140,16 +105,19 @@ async def generate_structured_text(
         )
     )
 
+    options = {"temperature": 0, "num_ctx": context_window}
+    if max_output_tokens is not None:
+        options["num_predict"] = max_output_tokens
+
     payload = {
         "model": selected_model,
         "prompt": prompt,
         "stream": False,
         "format": grammar_safe_schema,
-        "options": {
-            "temperature": 0,
-            "num_ctx": 8192,
-        },
+        "options": options,
     }
+    if think is not None:
+        payload["think"] = think
 
     timeout = httpx.Timeout(
         timeout=timeout_seconds,
@@ -166,14 +134,14 @@ async def generate_structured_text(
             )
 
     except httpx.ConnectError as error:
-        raise RuntimeError(
+        raise OllamaStructuredOutputError(
             "Cannot connect to Ollama at "
             f"{base_url}. Confirm that Ollama "
             "is running."
         ) from error
 
     except httpx.TimeoutException as error:
-        raise RuntimeError(
+        raise OllamaStructuredOutputError(
             "Ollama timed out while generating "
             "structured output."
         ) from error
@@ -194,7 +162,7 @@ async def generate_structured_text(
                 or "No error body returned."
             )
 
-        raise RuntimeError(
+        raise OllamaStructuredOutputError(
             "Ollama rejected the structured-output "
             f"request with HTTP "
             f"{response.status_code}: "
@@ -204,43 +172,28 @@ async def generate_structured_text(
     try:
         response_body = response.json()
     except ValueError as error:
-        raise RuntimeError(
+        raise OllamaStructuredOutputError(
             "Ollama returned a non-JSON HTTP "
             "response."
         ) from error
 
-    generated_text = response_body.get(
-        "response"
-    )
+    if not isinstance(response_body, dict):
+        raise OllamaStructuredOutputError("Ollama returned an invalid response object.")
 
-    if not isinstance(
-        generated_text,
-        str,
-    ):
-        raise RuntimeError(
-            "Ollama returned no generated "
-            "response text."
-        )
+    response_text = response_body.get("response")
+    generated_text = response_text.strip() if isinstance(response_text, str) else ""
 
-    generated_text = generated_text.strip()
+    if response_body.get("done_reason") == "length":
+        # JSON can finish exactly at the limit. Let callers validate complete output.
+        try:
+            json.loads(generated_text)
+        except json.JSONDecodeError as error:
+            raise OllamaOutputLimitError(
+                "Ollama reached its generation limit before returning complete JSON."
+            ) from error
 
     if not generated_text:
-        done_reason = response_body.get(
-            "done_reason"
-        )
-
-        thinking_text = response_body.get(
-            "thinking",
-            "",
-        )
-
-        raise RuntimeError(
-            "Ollama returned an empty structured "
-            "response. "
-            f"done_reason={done_reason!r}, "
-            "thinking_characters="
-            f"{len(thinking_text)}"
-        )
+        raise OllamaStructuredOutputError("Ollama returned an empty structured response.")
 
     return generated_text
     

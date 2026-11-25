@@ -1,160 +1,68 @@
+import Image from "next/image";
+import Link from "next/link";
+import { PageFrame } from "@/components/PageHeader";
 import { ToolCard } from "@/components/ToolCard";
-import Link from "next/link"; 
-
-const tools = [
-  {
-    title: "Ingest and Index",
-    description: "Upload PDFs, EPUBs, or TXT files and index them into Qdrant.",
-    href: "/ingest",
-  },
-  {
-  title: "Ingestion Jobs",
-  description:
-    "Monitor queued, running, completed, failed, and retried ingestion jobs.",
-  href: "/ingestion-jobs",
-},
-    {
-  title: "Document Library",
-  description:
-    "View registered documents, versions, active status, and deprecated sources.",
-  href: "/documents",
-},
-  {
-    title: "Book Curator",
-    description:
-      "Evaluate book quality, rank recommended sources, review duplicate editions, and manage library priorities.",
-    href: "/book-curator",
-  },
-  {
-  title: "Book-to-Skill Dashboard",
-  description:
-    "Track approved mappings, skill coverage, pending reviews, top books, and taxonomy gaps.",
-  href: "/book-skill-dashboard",
-},
-  {
-    title: "Skill Taxonomy",
-    description:
-      "Explore technical domains, categories, skills, aliases, prerequisites, and related competencies.",
-    href: "/skill-taxonomy",
-  },
-  {
-    title: "Semantic Search",
-    description: "Inspect retrieved chunks directly before LLM generation.",
-    href: "/search",
-  },
-  {
-    title: "RAG Chat",
-    description: "Ask questions against your indexed ebook library.",
-    href: "/rag-chat",
-  },
-  {
-    title: "Agentic RAG",
-    description:
-      "Use intent classification, domain-aware routing, query rewriting, and fallback retrieval.",
-    href: "/agentic-rag",
-  },
-  {
-    title: "Learning Path",
-    description: "Generate structured study plans from your ebook knowledge base.",
-    href: "/learning-path",
-  },
-  {
-    title: "Project Generator",
-    description:
-      "Generate portfolio-grade project plans with architecture, APIs, database design, and resume bullets.",
-    href: "/project-generator",
-  },
-  {
-    title: "Architecture Review",
-    description:
-      "Review system designs for security, scalability, reliability, data modeling, and deployment.",
-    href: "/architecture-review",
-  },
-  {
-    title: "Code Review",
-    description:
-      "Paste code and review it for correctness, security, reliability, maintainability, and testing.",
-    href: "/code-review",
-  },
-  {
-    title: "Backend Health",
-    description: "Verify that the FastAPI backend is reachable.",
-    href: "/health",
-  },
-  {
-  title: "Skill Intelligence",
-  description: "Review assessed skills, career gaps, recommendations and reading progress.",
-  href: "/skill-intelligence",
-},
-{
-  title: "RAG Evaluation",
-  description: "Benchmarks, citations, runs and quality history.",
-  href: "/evaluation",
-},
-];
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
+import { workspaceGroups } from "@/components/workspace-navigation";
+import styles from "./home.module.css";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-neutral-100">
-      <section className="mx-auto max-w-7xl">
-        <div className="mb-10">
-          <p className="text-sm font-medium uppercase tracking-[0.3em] text-neutral-500">
-            Personal Agentic RAG
-          </p>
-
-          <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight text-white md:text-5xl">
-            Ebook-powered AI learning and portfolio assistant
-          </h1>
-
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-neutral-400">
-            A local AI system for ingesting technical ebooks, searching indexed
-            knowledge, generating source-backed answers, building learning
-            paths, creating project plans, reviewing architectures, and
-            reviewing code.
-          </p>
+    <PageFrame width="wide" className={styles.home}>
+      <section className={styles.hero} aria-labelledby="workspace-title">
+        <div className={styles.heroImage} aria-hidden="true">
+          <Image
+            src="/ebook-archive.webp"
+            alt=""
+            fill
+            sizes="(max-width: 650px) 100vw, 58vw"
+            preload
+          />
         </div>
-
-        <div className="mb-8 grid gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">
-              Backend
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">FastAPI</p>
-          </div>
-
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">
-              Vector DB
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">Qdrant</p>
-          </div>
-
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">
-              Local LLM
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">Ollama</p>
-          </div>
-
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">
-              Frontend
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">Next.js</p>
+        <div className={styles.heroContent}>
+          <p className="workspace-kicker">Personal ebook workspace</p>
+          <h1 id="workspace-title">Put your ebook library to work.</h1>
+          <p className={styles.intro}>
+            Search your books, ask questions with citations, and turn what you
+            learn into portfolio projects.
+          </p>
+          <div className={styles.heroActions}>
+            <Link href="/search" className="workspace-button">
+              <WorkspaceIcon name="search" />
+              Search ebooks
+            </Link>
+            <Link
+              href="/documents"
+              className="workspace-button workspace-button--secondary"
+            >
+              Browse library
+            </Link>
           </div>
         </div>
+      </section>
 
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {tools.map((tool) => (
-            <ToolCard
-              key={tool.href}
-              title={tool.title}
-              description={tool.description}
-              href={tool.href}
-            />
+      <section aria-labelledby="workspace-tools" className={styles.directory}>
+        <h2 id="workspace-tools">Workspace tools</h2>
+        <div className={styles.shelves}>
+          {workspaceGroups.map(({ label, icon, tools }) => (
+            <section key={label} className={styles.shelf} aria-label={label}>
+              <h3>
+                <span>
+                  <WorkspaceIcon name={icon} />
+                </span>
+                {label}
+              </h3>
+              <ul>
+                {tools.map(({ title, href }) => (
+                  <li key={href}>
+                    <ToolCard title={title} href={href} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
         </div>
       </section>
-    </main>
+    </PageFrame>
   );
 }

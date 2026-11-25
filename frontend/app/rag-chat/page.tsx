@@ -1,7 +1,9 @@
 "use client";
 
+import { PageFrame, PageHeader } from "@/components/PageHeader";
+import { SourceCard } from "@/components/SourceCard";
+import { Field, StatusMessage } from "@/components/WorkspaceUI";
 import { useState } from "react";
-import Link from "next/link";
 import { apiPost } from "@/lib/api";
 import { MarkdownContent } from "@/components/MarkdownContent";
 
@@ -43,22 +45,6 @@ type RagChatRequest = {
   auto_detect_domains: boolean;
 };
 
-function formatPages(source: RagSource): string {
-  if (source.page_start !== null && source.page_end !== null) {
-    if (source.page_start === source.page_end) {
-      return String(source.page_start);
-    }
-
-    return `${source.page_start}-${source.page_end}`;
-  }
-
-  if (source.page_number !== null) {
-    return String(source.page_number);
-  }
-
-  return "N/A";
-}
-
 export default function RagChatPage() {
   const [question, setQuestion] = useState("");
   const [domainsInput, setDomainsInput] = useState("");
@@ -98,7 +84,7 @@ export default function RagChatPage() {
     try {
       const data = await apiPost<RagChatResponse, RagChatRequest>(
         "/rag-chat",
-        payload
+        payload,
       );
 
       setResult(data);
@@ -110,171 +96,146 @@ export default function RagChatPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-neutral-100">
-      <section className="mx-auto max-w-5xl">
-        <div className="mb-8">
-          <Link href="/" className="text-sm text-neutral-400 hover:text-white">
-            ← Back to dashboard
-          </Link>
+    <PageFrame>
+      <PageHeader
+        title="RAG Chat"
+        eyebrow="Retrieval"
+        description="Ask your indexed ebook library a question and review the passages behind the answer."
+      />
 
-          <h1 className="mt-4 text-3xl font-bold">RAG Chat</h1>
-          <p className="mt-3 max-w-3xl text-neutral-400">
-            Ask questions against your indexed ebook library. The backend will
-            retrieve relevant chunks from Qdrant and generate an answer using
-            your local Ollama model.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <label className="block text-sm font-medium text-neutral-300">
-            Question
-          </label>
-
+      <form
+        className="workspace-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submitQuestion();
+        }}
+      >
+        <Field label="Question">
           <textarea
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             rows={5}
             placeholder="Example: How do I design a secure backend API?"
-            className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+            className="workspace-field"
           />
+        </Field>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Limit
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div>
+            <Field label="Source limit">
               <input
                 type="number"
                 min={1}
                 max={20}
                 value={limit}
                 onChange={(event) => setLimit(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
+          </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-300">
-                Domains Override
-              </label>
+          <div className="md:col-span-2">
+            <Field
+              label="Domain override"
+              hint="Optional. Comma-separated domains."
+            >
               <input
                 value={domainsInput}
                 onChange={(event) => setDomainsInput(event.target.value)}
                 placeholder="backend_development, cybersecurity"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Optional. Comma-separated domains.
-              </p>
-            </div>
+            </Field>
           </div>
-
-          <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
-            <input
-              type="checkbox"
-              checked={autoDetectDomains}
-              onChange={(event) => setAutoDetectDomains(event.target.checked)}
-            />
-            Auto-detect domains
-          </label>
-
-          <button
-            onClick={submitQuestion}
-            disabled={loading}
-            className="mt-5 rounded-xl bg-white px-5 py-2 font-medium text-black disabled:opacity-50"
-          >
-            {loading ? "Thinking..." : "Ask"}
-          </button>
         </div>
 
-        {error && (
-          <pre className="mt-6 overflow-auto rounded-xl border border-red-900 bg-red-950 p-4 text-sm text-red-200">
-            {error}
-          </pre>
-        )}
+        <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            checked={autoDetectDomains}
+            onChange={(event) => setAutoDetectDomains(event.target.checked)}
+          />
+          Auto-detect domains
+        </label>
 
-        {result && (
-          <div className="mt-8 space-y-6">
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
-                <span>Collection: {result.collection_name}</span>
-                <span>•</span>
-                <span>Sources: {result.source_count}</span>
-                <span>•</span>
-                <span>{result.elapsed_seconds}s</span>
-                <span>•</span>
-                <span>
-                  Domain filter: {result.domain_filter_used ? "yes" : "no"}
-                </span>
+        <button
+          type="submit"
+          disabled={loading}
+          className="workspace-button mt-5"
+        >
+          {loading ? "Thinking..." : "Ask"}
+        </button>
+      </form>
+
+      {loading && (
+        <div className="mt-5">
+          <StatusMessage tone="info">
+            Working with your ebook library…
+          </StatusMessage>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-5">
+          <StatusMessage tone="error">{error}</StatusMessage>
+        </div>
+      )}
+
+      {result && (
+        <div className="mt-8 space-y-6">
+          <section className="workspace-panel">
+            <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
+              <span>Collection: {result.collection_name}</span>
+              <span>•</span>
+              <span>Sources: {result.source_count}</span>
+              <span>•</span>
+              <span>{result.elapsed_seconds}s</span>
+              <span>•</span>
+              <span>
+                Domain filter: {result.domain_filter_used ? "yes" : "no"}
+              </span>
+            </div>
+
+            <h2 className="text-xl font-semibold">Answer</h2>
+            <div className="mt-4">
+              <MarkdownContent content={result.answer} />
+            </div>
+          </section>
+
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Routing Metadata</h2>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-sm text-neutral-400">Detected Domains</p>
+                <p className="mt-1 text-sm">
+                  {result.detected_domains.join(", ") || "N/A"}
+                </p>
               </div>
 
-              <h2 className="text-xl font-semibold">Answer</h2>
-              <div className="mt-4">
-                <MarkdownContent content={result.answer} />
-                </div>
-            </section>
-
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Routing Metadata</h2>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-neutral-400">Detected Domains</p>
-                  <p className="mt-1 text-sm">
-                    {result.detected_domains.join(", ") || "N/A"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-neutral-400">Search Domains</p>
-                  <p className="mt-1 text-sm">
-                    {result.search_domains.join(", ") || "All"}
-                  </p>
-                </div>
+              <div>
+                <p className="text-sm text-neutral-400">Search Domains</p>
+                <p className="mt-1 text-sm">
+                  {result.search_domains.join(", ") || "All"}
+                </p>
               </div>
-            </section>
+            </div>
+          </section>
 
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Sources</h2>
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Sources</h2>
 
-              <div className="mt-4 space-y-4">
-                {result.sources.map((source) => (
-                  <div
-                    key={`${source.source_number}-${source.chunk_index}`}
-                    className="rounded-xl border border-neutral-800 bg-neutral-950 p-4"
-                  >
-                    <div className="flex flex-wrap gap-2 text-xs text-neutral-500">
-                      <span>Source {source.source_number}</span>
-                      <span>•</span>
-                      <span>Score: {source.score.toFixed(4)}</span>
-                      <span>•</span>
-                      <span>Pages: {formatPages(source)}</span>
-                      <span>•</span>
-                      <span>Chunk: {source.chunk_index ?? "N/A"}</span>
-                    </div>
-
-                    <h3 className="mt-2 font-medium">
-                      {source.title || "Unknown title"}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-500">
-                      {source.filename || "Unknown file"}
-                    </p>
-
-                    <p className="mt-2 text-xs text-neutral-500">
-                      Domains: {(source.domains || []).join(", ") || "N/A"}
-                    </p>
-
-                    <p className="mt-3 text-sm leading-6 text-neutral-300">
-                      {source.chunk_preview}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-      </section>
-    </main>
+            <div className="mt-4 space-y-4">
+              {result.sources.map((source) => (
+                <SourceCard
+                  key={`${source.source_number}-${source.chunk_index}`}
+                  source={source}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </PageFrame>
   );
 }

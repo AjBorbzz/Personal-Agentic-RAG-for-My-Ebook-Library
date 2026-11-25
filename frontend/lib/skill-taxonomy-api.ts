@@ -1,97 +1,37 @@
+import { apiGet, type ApiReadOptions } from "./api";
 import type {
   SkillDetail,
   SkillSearchResponse,
   SkillTaxonomyTree,
 } from "./skill-taxonomy-types";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "http://localhost:8000";
-
-async function apiError(
-  response: Response,
-): Promise<string> {
-  try {
-    const body = await response.json();
-
-    if (typeof body.detail === "string") {
-      return body.detail;
-    }
-
-    return JSON.stringify(body);
-  } catch {
-    return (
-      `Request failed with status ` +
-      `${response.status}.`
-    );
-  }
+export function fetchSkillTree(
+  options?: ApiReadOptions,
+): Promise<SkillTaxonomyTree> {
+  return apiGet<SkillTaxonomyTree>("/skill-taxonomy/tree", options);
 }
 
-export async function fetchSkillTree():
-Promise<SkillTaxonomyTree> {
-  const response = await fetch(
-    `${API_BASE_URL}/skill-taxonomy/tree`,
-    {
-      cache: "no-store",
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      await apiError(response),
-    );
-  }
-
-  return response.json();
-}
-
-export async function searchSkills(
+export function searchSkills(
   query: string,
+  options?: ApiReadOptions,
 ): Promise<SkillSearchResponse> {
   const parameters = new URLSearchParams();
-
-  if (query.trim()) {
-    parameters.set(
-      "query",
-      query.trim(),
-    );
-  }
-
+  const trimmed = query.trim();
+  if (trimmed) parameters.set("query", trimmed);
   parameters.set("limit", "100");
 
-  const response = await fetch(
-    `${API_BASE_URL}/skill-taxonomy/skills?` +
-      parameters.toString(),
-    {
-      cache: "no-store",
-    },
+  return apiGet<SkillSearchResponse>(
+    `/skill-taxonomy/skills?${parameters}`,
+    options,
   );
-
-  if (!response.ok) {
-    throw new Error(
-      await apiError(response),
-    );
-  }
-
-  return response.json();
 }
 
-export async function fetchSkillDetail(
+export function fetchSkillDetail(
   skillId: string,
+  options?: ApiReadOptions,
 ): Promise<SkillDetail> {
-  const response = await fetch(
-    `${API_BASE_URL}/skill-taxonomy/skills/` +
-      skillId,
-    {
-      cache: "no-store",
-    },
+  return apiGet<SkillDetail>(
+    `/skill-taxonomy/skills/${encodeURIComponent(skillId)}`,
+    options,
   );
-
-  if (!response.ok) {
-    throw new Error(
-      await apiError(response),
-    );
-  }
-
-  return response.json();
 }

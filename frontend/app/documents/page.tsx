@@ -2,51 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { PageFrame, PageHeader } from "@/components/PageHeader";
+import { Field, StatusMessage } from "@/components/WorkspaceUI";
 import { apiGet, apiPatch } from "@/lib/api";
 
 type DocumentRecord = {
   document_id: string;
-
   filename: string | null;
   title: string | null;
-  author: string | null;
-  file_type: string | null;
-
   source_type: string | null;
   tool_name: string | null;
   tool_version: string | null;
   version_major: number | null;
-  version_minor: number | null;
-
   publication_year: number | null;
-  publication_date: string | null;
-
-  primary_domain: string | null;
   domains: string[] | null;
-
   page_count: number | null;
   chunk_count: number | null;
-  text_characters: number | null;
-
-  content_hash: string | null;
-
   is_active: boolean;
   is_deprecated: boolean;
-  superseded_by_document_id: string | null;
-
-  saved_path: string | null;
-  parsed_output_path: string | null;
-  chunks_output_path: string | null;
-
   notes: string | null;
-
   ingested_at: string;
-  created_at: string;
-  updated_at: string;
-
   metadata_review_status: string;
-  metadata_reviewed: boolean;
-  metadata_confidence: number | null;
 };
 
 type DeprecateRequest = {
@@ -54,389 +30,323 @@ type DeprecateRequest = {
   notes: string | null;
 };
 
-function buildDocumentsPath(filters: {
-  toolName: string;
-  isActive: string;
-  isDeprecated: string;
-  limit: number;
-}) {
-  const params = new URLSearchParams();
+const DEFAULT_FILTERS = {
+  toolName: "",
+  isActive: "all",
+  isDeprecated: "all",
+  limit: 50,
+};
 
-  if (filters.toolName.trim()) {
-    params.set("tool_name", filters.toolName.trim());
-  }
+function buildDocumentsPath(filters: typeof DEFAULT_FILTERS) {
+  const params = new URLSearchParams({ limit: String(filters.limit) });
+  const toolName = filters.toolName.trim();
 
-  if (filters.isActive !== "all") {
-    params.set("is_active", filters.isActive);
-  }
-
-  if (filters.isDeprecated !== "all") {
+  if (toolName) params.set("tool_name", toolName);
+  if (filters.isActive !== "all") params.set("is_active", filters.isActive);
+  if (filters.isDeprecated !== "all")
     params.set("is_deprecated", filters.isDeprecated);
-  }
-
-  params.set("limit", String(filters.limit));
 
   return `/documents?${params.toString()}`;
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "N/A";
-  }
-
-  return new Date(value).toLocaleString();
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-function StatusBadge({ document }: { document: DocumentRecord }) {
-  if (document.is_deprecated) {
-    return (
-      <span className="rounded-full border border-yellow-700 bg-yellow-950 px-2 py-1 text-xs text-yellow-300">
-        Deprecated
-        Metadata: {document.metadata_review_status}
-      </span>
-    );
-  }
-
-  if (document.is_active) {
-    return (
-      <span className="rounded-full border border-green-700 bg-green-950 px-2 py-1 text-xs text-green-300">
-        Active
-        Metadata: {document.metadata_review_status}
-      </span>
-    );
-  }
+function DocumentCard({
+  document,
+  deprecatingId,
+  onDeprecate,
+}: {
+  document: DocumentRecord;
+  deprecatingId: string | null;
+  onDeprecate: (documentId: string) => void;
+}) {
+  const documentPath = `/documents/${encodeURIComponent(document.document_id)}`;
+  const status = document.is_deprecated
+    ? "Deprecated"
+    : document.is_active
+      ? "Active"
+      : "Inactive";
+  const statusClass = {
+    Deprecated: "border-yellow-700 bg-yellow-950 text-yellow-300",
+    Active: "border-green-700 bg-green-950 text-green-300",
+    Inactive: "",
+  }[status];
+  const details = [
+    { label: "Document ID", value: document.document_id, mono: true },
+    { label: "Tool", value: document.tool_name },
+    {
+      label: "Version",
+      value: document.tool_version || document.version_major,
+    },
+    { label: "Source type", value: document.source_type },
+    { label: "Publication year", value: document.publication_year },
+    { label: "Chunks", value: document.chunk_count },
+    { label: "Pages", value: document.page_count },
+    { label: "Ingested", value: formatDate(document.ingested_at) },
+  ];
 
   return (
-    <span className="rounded-full border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-300">
-      Inactive
-      Metadata: {document.metadata_review_status}
-    </span>
+    <article className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 max-w-full flex-[1_1_20rem]">
+          <h3 className="font-semibold text-white [overflow-wrap:anywhere]">
+            {document.title || document.filename || "Untitled"}
+          </h3>
+          <p className="mt-1 text-sm text-neutral-400 [overflow-wrap:anywhere]">
+            {document.filename || "Unknown file"}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className={`workspace-badge ${statusClass}`}>{status}</span>
+            <span className="workspace-badge">
+              Metadata {document.metadata_review_status.replaceAll("_", " ")}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-wrap gap-2">
+          <Link
+            className="workspace-button workspace-button--secondary"
+            href={`${documentPath}/metadata`}
+          >
+            Review metadata
+          </Link>
+          <Link
+            className="workspace-button workspace-button--secondary"
+            href={`${documentPath}/skills`}
+          >
+            Review skills
+          </Link>
+          <button
+            type="button"
+            className="workspace-button workspace-button--secondary"
+            disabled={document.is_deprecated || deprecatingId !== null}
+            onClick={() => onDeprecate(document.document_id)}
+          >
+            {deprecatingId === document.document_id
+              ? "Deprecating…"
+              : "Mark deprecated"}
+          </button>
+        </div>
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        {details.map(({ label, value, mono }) => (
+          <div key={label} className="min-w-0">
+            <dt className="text-xs uppercase tracking-wide text-neutral-400">
+              {label}
+            </dt>
+            <dd
+              className={`mt-1 text-sm text-neutral-300 [overflow-wrap:anywhere] ${
+                mono ? "font-mono text-xs" : ""
+              }`}
+            >
+              {value ?? "N/A"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <dl className="mt-4 min-w-0 space-y-3">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+          <dt className="text-xs uppercase tracking-wide text-neutral-400">
+            Domains
+          </dt>
+          <dd className="mt-1 text-sm text-neutral-300 [overflow-wrap:anywhere]">
+            {document.domains?.join(", ") || "N/A"}
+          </dd>
+        </div>
+        {document.notes && (
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+            <dt className="text-xs uppercase tracking-wide text-neutral-400">
+              Notes
+            </dt>
+            <dd className="mt-1 text-sm text-neutral-300 [overflow-wrap:anywhere]">
+              {document.notes}
+            </dd>
+          </div>
+        )}
+      </dl>
+    </article>
   );
 }
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [toolName, setToolName] = useState("");
-  const [isActive, setIsActive] = useState("all");
-  const [isDeprecated, setIsDeprecated] = useState("all");
-  const [limit, setLimit] = useState(50);
-
-  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
+  const [loading, setLoading] = useState(true);
   const [deprecatingId, setDeprecatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  async function loadDocuments() {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    const controller = new AbortController();
 
-    try {
-      const path = buildDocumentsPath({
-        toolName,
-        isActive,
-        isDeprecated,
-        limit,
+    apiGet<DocumentRecord[]>(buildDocumentsPath(appliedFilters), {
+      signal: controller.signal,
+    })
+      .then((data) => {
+        if (!controller.signal.aborted) setDocuments(data);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(
+            err instanceof Error ? err.message : "Could not load documents.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
 
-      const data = await apiGet<DocumentRecord[]>(path);
-      setDocuments(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
+    return () => controller.abort();
+  }, [appliedFilters]);
+
+  function refresh(nextFilters: typeof DEFAULT_FILTERS) {
+    setLoading(true);
+    setError(null);
+    setAppliedFilters({ ...nextFilters });
   }
 
   async function deprecateDocument(documentId: string) {
-    const confirmed = window.confirm(
-      "Mark this document as deprecated and inactive?"
-    );
-
-    if (!confirmed) {
+    if (!window.confirm("Mark this document as deprecated and inactive?"))
       return;
-    }
 
     setDeprecatingId(documentId);
     setError(null);
-
-    const payload: DeprecateRequest = {
-      superseded_by_document_id: null,
-      notes: "Deprecated from Document Library UI.",
-    };
+    setNotice(null);
 
     try {
       await apiPatch<DocumentRecord, DeprecateRequest>(
-        `/documents/${documentId}/deprecate`,
-        payload
+        `/documents/${encodeURIComponent(documentId)}/deprecate`,
+        {
+          superseded_by_document_id: null,
+          notes: "Deprecated from Document Library UI.",
+        },
       );
 
-      await loadDocuments();
+      setNotice("Document marked as deprecated.");
+      refresh(appliedFilters);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown deprecate error");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not deprecate the document.",
+      );
     } finally {
       setDeprecatingId(null);
     }
   }
 
-  useEffect(() => {
-    loadDocuments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-neutral-100">
-      <section className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <Link href="/" className="text-sm text-neutral-400 hover:text-white">
-            ← Back to dashboard
-          </Link>
+    <PageFrame width="wide" className="space-y-6">
+      <PageHeader
+        title="Document Library"
+        description="Inspect ebook editions, review their metadata and skill mappings, and retire outdated sources from retrieval."
+      />
 
-          <h1 className="mt-4 text-3xl font-bold">Document Library</h1>
+      <form
+        className="workspace-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setNotice(null);
+          refresh(filters);
+        }}
+      >
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Tool name">
+            <input
+              value={filters.toolName}
+              onChange={(event) =>
+                setFilters({ ...filters, toolName: event.target.value })
+              }
+              placeholder="Django, FastAPI, Azure"
+              className="workspace-field"
+            />
+          </Field>
+          <Field label="Active">
+            <select
+              value={filters.isActive}
+              onChange={(event) =>
+                setFilters({ ...filters, isActive: event.target.value })
+              }
+              className="workspace-field"
+            >
+              <option value="all">All</option>
+              <option value="true">Active only</option>
+              <option value="false">Inactive only</option>
+            </select>
+          </Field>
+          <Field label="Deprecated">
+            <select
+              value={filters.isDeprecated}
+              onChange={(event) =>
+                setFilters({ ...filters, isDeprecated: event.target.value })
+              }
+              className="workspace-field"
+            >
+              <option value="all">All</option>
+              <option value="true">Deprecated only</option>
+              <option value="false">Non-deprecated only</option>
+            </select>
+          </Field>
+          <Field label="Limit">
+            <input
+              type="number"
+              min={1}
+              max={200}
+              required
+              value={filters.limit || ""}
+              onChange={(event) =>
+                setFilters({ ...filters, limit: Number(event.target.value) })
+              }
+              className="workspace-field"
+            />
+          </Field>
+        </div>
 
-          <p className="mt-3 max-w-3xl text-neutral-400">
-            View registered documents from PostgreSQL, inspect version metadata,
-            and mark old documents as deprecated so retrieval avoids outdated
-            content by default.
+        <button
+          type="submit"
+          disabled={loading || deprecatingId !== null}
+          className="workspace-button mt-5"
+        >
+          {loading ? "Loading…" : "Load documents"}
+        </button>
+      </form>
+
+      {error && <StatusMessage tone="error">{error}</StatusMessage>}
+      {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
+      {loading && <StatusMessage tone="info">Loading documents…</StatusMessage>}
+
+      <section className="workspace-panel min-w-0" aria-busy={loading}>
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-xl font-semibold">Registered documents</h2>
+          <p className="text-sm text-neutral-400">
+            {documents.length}{" "}
+            {documents.length === 1 ? "document" : "documents"}
           </p>
         </div>
 
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <div className="grid gap-4 md:grid-cols-5">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-300">
-                Tool Name
-              </label>
-              <input
-                value={toolName}
-                onChange={(event) => setToolName(event.target.value)}
-                placeholder="django, fastapi, azure"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
-              />
-            </div>
+        <div className="min-w-0 space-y-4">
+          {documents.map((document) => (
+            <DocumentCard
+              key={document.document_id}
+              document={document}
+              deprecatingId={deprecatingId}
+              onDeprecate={deprecateDocument}
+            />
+          ))}
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Active
-              </label>
-              <select
-                value={isActive}
-                onChange={(event) => setIsActive(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
-              >
-                <option value="all">All</option>
-                <option value="true">Active only</option>
-                <option value="false">Inactive only</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Deprecated
-              </label>
-              <select
-                value={isDeprecated}
-                onChange={(event) => setIsDeprecated(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
-              >
-                <option value="all">All</option>
-                <option value="true">Deprecated only</option>
-                <option value="false">Non-deprecated only</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Limit
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={200}
-                value={limit}
-                onChange={(event) => setLimit(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={loadDocuments}
-            disabled={loading}
-            className="mt-5 rounded-xl bg-white px-5 py-2 font-medium text-black disabled:opacity-50"
-          >
-            {loading ? "Loading..." : "Load Documents"}
-          </button>
-        </section>
-
-        {error && (
-          <pre className="mt-6 overflow-auto rounded-xl border border-red-900 bg-red-950 p-4 text-sm text-red-200">
-            {error}
-          </pre>
-        )}
-
-        <section className="mt-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">Registered Documents</h2>
-            <p className="text-sm text-neutral-500">
-              {documents.length} document(s)
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {documents.map((document) => (
-              <div
-                key={document.document_id}
-                className="rounded-xl border border-neutral-800 bg-neutral-950 p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-white">
-                        {document.title || document.filename || "Untitled"}
-                      </h3>
-
-                      <StatusBadge document={document} />
-                    </div>
-
-                    <p className="mt-1 text-sm text-neutral-500">
-                      {document.filename || "Unknown file"}
-                    </p>
-                  </div>
-
-                  <Link
-                    href={`/documents/${document.document_id}/metadata`}
-                          className="rounded-lg border border-blue-800 px-3 py-1.5 text-xs text-blue-300"
-                        >
-                          Review Metadata
-                  </Link>
-                  <Link
-                      href={
-                        `/documents/${document.document_id}/skills`
-                      }
-                      className="rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-300 transition hover:bg-neutral-800"
-                    >
-                      Review skills
-                    </Link>
-
-                  <button
-                    onClick={() => deprecateDocument(document.document_id)}
-                    disabled={
-                      document.is_deprecated ||
-                      deprecatingId === document.document_id
-                    }
-                    className="rounded-lg border border-yellow-800 px-3 py-1.5 text-xs text-yellow-300 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {deprecatingId === document.document_id
-                      ? "Deprecating..."
-                      : "Mark Deprecated"}
-                  </button>
-                </div>
-
-                <div className="mt-4 grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Document ID
-                    </p>
-                    <p className="mt-1 break-all font-mono text-xs text-neutral-300">
-                      {document.document_id}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Tool
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {document.tool_name || "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Version
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {document.tool_version ||
-                        document.version_major ||
-                        "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Source Type
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {document.source_type || "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Publication Year
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {document.publication_year ?? "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Chunks
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {document.chunk_count ?? "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Pages
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {document.page_count ?? "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Ingested
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {formatDate(document.ingested_at)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Domains
-                  </p>
-                  <p className="mt-1 text-sm text-neutral-300">
-                    {(document.domains || []).join(", ") || "N/A"}
-                  </p>
-                </div>
-
-                {document.notes && (
-                  <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-                    <p className="text-xs uppercase tracking-wide text-neutral-500">
-                      Notes
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-300">
-                      {document.notes}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {!loading && documents.length === 0 && (
-              <p className="rounded-xl border border-neutral-800 bg-neutral-950 p-5 text-sm text-neutral-400">
-                No documents found.
-              </p>
-            )}
-          </div>
-        </section>
+          {!loading && !error && documents.length === 0 && (
+            <StatusMessage tone="info">
+              No documents match the selected filters.
+            </StatusMessage>
+          )}
+        </div>
       </section>
-    </main>
+    </PageFrame>
   );
 }

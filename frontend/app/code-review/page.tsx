@@ -1,7 +1,9 @@
 "use client";
 
+import { PageFrame, PageHeader } from "@/components/PageHeader";
+import { SourceCard } from "@/components/SourceCard";
+import { Field, StatusMessage } from "@/components/WorkspaceUI";
 import { useState } from "react";
-import Link from "next/link";
 import { apiPost } from "@/lib/api";
 import { MarkdownContent } from "@/components/MarkdownContent";
 
@@ -57,22 +59,6 @@ type CodeReviewRequest = {
   max_code_chars: number;
 };
 
-function formatPages(source: CodeReviewSource): string {
-  if (source.page_start !== null && source.page_end !== null) {
-    if (source.page_start === source.page_end) {
-      return String(source.page_start);
-    }
-
-    return `${source.page_start}-${source.page_end}`;
-  }
-
-  if (source.page_number !== null) {
-    return String(source.page_number);
-  }
-
-  return "N/A";
-}
-
 function parseCommaSeparated(value: string): string[] {
   return value
     .split(",")
@@ -89,10 +75,10 @@ export default function CodeReviewPage() {
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("python");
   const [codeContext, setCodeContext] = useState(
-    "Review this code for correctness, security, reliability, performance, maintainability, and testing."
+    "Review this code for correctness, security, reliability, performance, maintainability, and testing.",
   );
   const [reviewFocusInput, setReviewFocusInput] = useState(
-    "correctness, security, reliability, performance, maintainability, testing"
+    "correctness, security, reliability, performance, maintainability, testing",
   );
   const [domainsInput, setDomainsInput] = useState("");
   const [limit, setLimit] = useState(5);
@@ -127,7 +113,7 @@ export default function CodeReviewPage() {
     try {
       const data = await apiPost<CodeReviewResponse, CodeReviewRequest>(
         "/code-review",
-        payload
+        payload,
       );
 
       setResult(data);
@@ -141,7 +127,7 @@ export default function CodeReviewPage() {
   function loadSampleCode() {
     setLanguage("python");
     setCodeContext(
-      "FastAPI login API using SQLite. Review for security, reliability, maintainability, and testing issues."
+      "FastAPI login API using SQLite. Review for security, reliability, maintainability, and testing issues.",
     );
     setDomainsInput("backend_development, cybersecurity, databases");
     setCode(`from fastapi import FastAPI, Request
@@ -180,76 +166,74 @@ async def login(request: Request):
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-neutral-100">
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <Link href="/" className="text-sm text-neutral-400 hover:text-white">
-            ← Back to dashboard
-          </Link>
+    <PageFrame>
+      <PageHeader
+        title="Code Review"
+        eyebrow="Portfolio"
+        description="Review a code sample with guidance grounded in your indexed technical books."
+      />
 
-          <h1 className="mt-4 text-3xl font-bold">Code Review</h1>
-          <p className="mt-3 max-w-3xl text-neutral-400">
-            Paste code and review it using your ebook-backed knowledge base.
-            Useful for backend code, RAG pipeline code, SOC automation scripts,
-            XSOAR/XSIAM helpers, and portfolio project files.
-          </p>
+      <form
+        className="workspace-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submitCodeReview();
+        }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label
+            htmlFor="review-code"
+            className="text-sm font-medium text-neutral-100"
+          >
+            Code
+          </label>
+
+          <button
+            onClick={loadSampleCode}
+            type="button"
+            className="workspace-button workspace-button--secondary"
+          >
+            Load Sample Buggy FastAPI Code
+          </button>
         </div>
 
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="block text-sm font-medium text-neutral-300">
-              Code
-            </label>
+        <textarea
+          id="review-code"
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+          rows={18}
+          placeholder="Paste code here..."
+          spellCheck={false}
+          className="workspace-field mt-2 font-mono"
+        />
 
-            <button
-              onClick={loadSampleCode}
-              type="button"
-              className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500 hover:text-white"
-            >
-              Load Sample Buggy FastAPI Code
-            </button>
-          </div>
-
-          <textarea
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            rows={18}
-            placeholder="Paste code here..."
-            spellCheck={false}
-            className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 font-mono text-sm text-neutral-100 outline-none focus:border-neutral-400"
-          />
-
-          <div className="mt-4 grid gap-4 md:grid-cols-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Language
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
+          <div>
+            <Field label="Language">
               <input
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
                 placeholder="python"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Limit
-              </label>
+          <div>
+            <Field label="Source limit">
               <input
                 type="number"
                 min={3}
                 max={20}
                 value={limit}
                 onChange={(event) => setLimit(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
+            </Field>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Max Code Chars
-              </label>
+          <div>
+            <Field label="Maximum code characters">
               <input
                 type="number"
                 min={1000}
@@ -258,221 +242,190 @@ async def login(request: Request):
                 onChange={(event) =>
                   setMaxCodeChars(Number(event.target.value))
                 }
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Auto Domains
-              </label>
-              <label className="mt-5 flex items-center gap-2 text-sm text-neutral-300">
-                <input
-                  type="checkbox"
-                  checked={autoDetectDomains}
-                  onChange={(event) =>
-                    setAutoDetectDomains(event.target.checked)
-                  }
-                />
-                Enabled
-              </label>
-            </div>
+            </Field>
           </div>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-neutral-300">
-              Code Context
+          <div>
+            <label className="mt-5 flex items-center gap-2 text-sm text-neutral-300">
+              <input
+                type="checkbox"
+                checked={autoDetectDomains}
+                onChange={(event) => setAutoDetectDomains(event.target.checked)}
+              />
+              Auto-detect domains
             </label>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <Field label="Code context">
             <textarea
               value={codeContext}
               onChange={(event) => setCodeContext(event.target.value)}
               rows={3}
               placeholder="Explain what this code is supposed to do."
-              className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+              className="workspace-field"
             />
-          </div>
+          </Field>
+        </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Review Focus
-              </label>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <Field label="Review focus" hint="Comma-separated review areas.">
               <input
                 value={reviewFocusInput}
                 onChange={(event) => setReviewFocusInput(event.target.value)}
                 placeholder="correctness, security, reliability"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Comma-separated review areas.
-              </p>
-            </div>
+            </Field>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">
-                Domains Override
-              </label>
+          <div>
+            <Field
+              label="Domain override"
+              hint="Optional. Comma-separated domains."
+            >
               <input
                 value={domainsInput}
                 onChange={(event) => setDomainsInput(event.target.value)}
                 placeholder="backend_development, cybersecurity, databases"
-                className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none focus:border-neutral-400"
+                className="workspace-field"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                Optional. Comma-separated domains.
-              </p>
-            </div>
+            </Field>
           </div>
-
-          <button
-            onClick={submitCodeReview}
-            disabled={loading}
-            className="mt-5 rounded-xl bg-white px-5 py-2 font-medium text-black disabled:opacity-50"
-          >
-            {loading ? "Reviewing..." : "Review Code"}
-          </button>
         </div>
 
-        {error && (
-          <pre className="mt-6 overflow-auto rounded-xl border border-red-900 bg-red-950 p-4 text-sm text-red-200">
-            {error}
-          </pre>
-        )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="workspace-button mt-5"
+        >
+          {loading ? "Reviewing..." : "Review Code"}
+        </button>
+      </form>
 
-        {result && (
-          <div className="mt-8 space-y-6">
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
-                <span>Collection: {result.collection_name}</span>
-                <span>•</span>
-                <span>Sources: {result.source_count}</span>
-                <span>•</span>
-                <span>{result.elapsed_seconds}s</span>
-                <span>•</span>
-                <span>Language: {result.language}</span>
+      {loading && (
+        <div className="mt-5">
+          <StatusMessage tone="info">
+            Working with your ebook library…
+          </StatusMessage>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-5">
+          <StatusMessage tone="error">{error}</StatusMessage>
+        </div>
+      )}
+
+      {result && (
+        <div className="mt-8 space-y-6">
+          <section className="workspace-panel">
+            <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-400">
+              <span>Collection: {result.collection_name}</span>
+              <span>•</span>
+              <span>Sources: {result.source_count}</span>
+              <span>•</span>
+              <span>{result.elapsed_seconds}s</span>
+              <span>•</span>
+              <span>Language: {result.language}</span>
+            </div>
+
+            <h2 className="text-xl font-semibold">Code Review</h2>
+            <div className="mt-4">
+              <MarkdownContent content={result.code_review} />
+            </div>
+          </section>
+
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Routing Metadata</h2>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Detected Domains
+                </p>
+                <p className="mt-2 text-sm">
+                  {result.detected_domains.join(", ") || "N/A"}
+                </p>
               </div>
 
-              <h2 className="text-xl font-semibold">Code Review</h2>
-              <div className="mt-4">
-                <MarkdownContent content={result.code_review} />
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Routing Metadata</h2>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Detected Domains
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {result.detected_domains.join(", ") || "N/A"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Search Domains
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {result.search_domains.join(", ") || "All"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Retrieval Attempts
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.retrieval_attempts}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Domain Filter
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.domain_filter_used ? "Used" : "Not used"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Fallback
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {result.fallback_used ? "Used" : "Not used"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    Rewritten Query
-                  </p>
-                  <p className="mt-2 text-sm text-neutral-300">
-                    {result.rewritten_query || "Not used"}
-                  </p>
-                </div>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Search Domains
+                </p>
+                <p className="mt-2 text-sm">
+                  {result.search_domains.join(", ") || "All"}
+                </p>
               </div>
 
-              {result.router_notes.length > 0 && (
-                <div className="mt-5">
-                  <p className="text-sm font-medium text-neutral-300">
-                    Router Notes
-                  </p>
-
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-400">
-                    {result.router_notes.map((note, index) => (
-                      <li key={`${note}-${index}`}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-xl font-semibold">Sources</h2>
-
-              <div className="mt-4 space-y-4">
-                {result.sources.map((source) => (
-                  <div
-                    key={`${source.source_number}-${source.chunk_index}`}
-                    className="rounded-xl border border-neutral-800 bg-neutral-950 p-4"
-                  >
-                    <div className="flex flex-wrap gap-2 text-xs text-neutral-500">
-                      <span>Source {source.source_number}</span>
-                      <span>•</span>
-                      <span>Score: {source.score.toFixed(4)}</span>
-                      <span>•</span>
-                      <span>Pages: {formatPages(source)}</span>
-                      <span>•</span>
-                      <span>Chunk: {source.chunk_index ?? "N/A"}</span>
-                    </div>
-
-                    <h3 className="mt-2 font-medium">
-                      {source.title || "Unknown title"}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-500">
-                      {source.filename || "Unknown file"}
-                    </p>
-
-                    <p className="mt-2 text-xs text-neutral-500">
-                      Domains: {(source.domains || []).join(", ") || "N/A"}
-                    </p>
-
-                    <p className="mt-3 text-sm leading-6 text-neutral-300">
-                      {source.chunk_preview}
-                    </p>
-                  </div>
-                ))}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Retrieval Attempts
+                </p>
+                <p className="mt-2 font-medium">{result.retrieval_attempts}</p>
               </div>
-            </section>
-          </div>
-        )}
-      </section>
-    </main>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Domain Filter
+                </p>
+                <p className="mt-2 font-medium">
+                  {result.domain_filter_used ? "Used" : "Not used"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Fallback
+                </p>
+                <p className="mt-2 font-medium">
+                  {result.fallback_used ? "Used" : "Not used"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Rewritten Query
+                </p>
+                <p className="mt-2 text-sm text-neutral-300">
+                  {result.rewritten_query || "Not used"}
+                </p>
+              </div>
+            </div>
+
+            {result.router_notes.length > 0 && (
+              <div className="mt-5">
+                <p className="text-sm font-medium text-neutral-300">
+                  Router Notes
+                </p>
+
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-400">
+                  {result.router_notes.map((note, index) => (
+                    <li key={`${note}-${index}`}>{note}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          <section className="workspace-panel">
+            <h2 className="text-xl font-semibold">Sources</h2>
+
+            <div className="mt-4 space-y-4">
+              {result.sources.map((source) => (
+                <SourceCard
+                  key={`${source.source_number}-${source.chunk_index}`}
+                  source={source}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </PageFrame>
   );
 }

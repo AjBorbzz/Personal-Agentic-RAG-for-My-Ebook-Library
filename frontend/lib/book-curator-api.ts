@@ -1,10 +1,8 @@
+import { apiGet, apiRequest, type ApiReadOptions } from "./api";
 import type {
   BookCuratorDashboard,
   RankingPurpose,
 } from "./book-curator-types";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 export interface DashboardFilters {
   purpose: RankingPurpose;
@@ -14,101 +12,39 @@ export interface DashboardFilters {
   audienceLevel?: string;
 }
 
-async function parseApiError(
-  response: Response,
-): Promise<string> {
-  try {
-    const body = await response.json();
-
-    if (typeof body.detail === "string") {
-      return body.detail;
-    }
-
-    return JSON.stringify(body);
-  } catch {
-    return (
-      `Request failed with status ` +
-      `${response.status}.`
-    );
-  }
-}
-
-export async function fetchBookCuratorDashboard(
+export function fetchBookCuratorDashboard(
   filters: DashboardFilters,
+  options?: ApiReadOptions,
 ): Promise<BookCuratorDashboard> {
-  const parameters = new URLSearchParams();
+  const parameters = new URLSearchParams({ purpose: filters.purpose });
+  const optionalFilters = {
+    domain: filters.domain,
+    topic: filters.topic,
+    technology: filters.technology,
+    audience_level: filters.audienceLevel,
+  };
 
-  parameters.set(
-    "purpose",
-    filters.purpose,
+  for (const [key, value] of Object.entries(optionalFilters)) {
+    const trimmed = value?.trim();
+    if (trimmed) parameters.set(key, trimmed);
+  }
+
+  return apiGet<BookCuratorDashboard>(
+    `/book-curator-dashboard?${parameters}`,
+    options,
   );
-
-  if (filters.domain?.trim()) {
-    parameters.set(
-      "domain",
-      filters.domain.trim(),
-    );
-  }
-
-  if (filters.topic?.trim()) {
-    parameters.set(
-      "topic",
-      filters.topic.trim(),
-    );
-  }
-
-  if (filters.technology?.trim()) {
-    parameters.set(
-      "technology",
-      filters.technology.trim(),
-    );
-  }
-
-  if (filters.audienceLevel?.trim()) {
-    parameters.set(
-      "audience_level",
-      filters.audienceLevel.trim(),
-    );
-  }
-
-  const response = await fetch(
-    `${API_BASE_URL}/book-curator-dashboard?` +
-      parameters.toString(),
-    {
-      cache: "no-store",
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      await parseApiError(response),
-    );
-  }
-
-  return response.json();
 }
 
-export async function reviewRelationship(
+export function reviewRelationship(
   relationshipId: string,
   action: "approve" | "reject",
 ): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/book-relationships/` +
-      `${relationshipId}/review`,
+  return apiRequest(
+    `/book-relationships/${encodeURIComponent(relationshipId)}/review`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        action,
-      }),
+      json: { action },
+      responseType: "void",
     },
   );
-
-  if (!response.ok) {
-    throw new Error(
-      await parseApiError(response),
-    );
-  }
 }

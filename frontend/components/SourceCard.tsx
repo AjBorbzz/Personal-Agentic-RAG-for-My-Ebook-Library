@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type SourceLike = {
   source_number?: number;
   score: number;
@@ -29,14 +31,11 @@ function formatPages(source: SourceLike): string {
       return String(source.page_start);
     }
 
-    return `${source.page_start}-${source.page_end}`;
+    return `${source.page_start}–${source.page_end}`;
   }
 
-  if (source.page_number !== null) {
-    return String(source.page_number);
-  }
-
-  return "N/A";
+  const page = source.page_number ?? source.page_start ?? source.page_end;
+  return page === null ? "Unknown" : String(page);
 }
 
 function getPreview(source: SourceLike): string {
@@ -53,19 +52,18 @@ export function SourceCard({ source, rank }: SourceCardProps) {
     rank !== undefined
       ? `Rank ${rank}`
       : source.source_number
-      ? `Source ${source.source_number}`
-      : "Source";
+        ? `Source ${source.source_number}`
+        : "Source";
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-      <div className="flex flex-wrap gap-2 text-xs text-neutral-500">
-        <span>{label}</span>
-        <span>•</span>
-        <span>Score: {source.score.toFixed(4)}</span>
-        <span>•</span>
-        <span>Pages: {formatPages(source)}</span>
-        <span>•</span>
-        <span>Chunk: {source.chunk_index ?? "N/A"}</span>
+    <article className="min-w-0 rounded-xl border border-neutral-800 border-l-accent bg-neutral-950 p-4 wrap-anywhere">
+      <div className="flex flex-wrap gap-2">
+        <span className="workspace-badge text-accent">{label}</span>
+        <span className="workspace-badge">Score {source.score.toFixed(4)}</span>
+        <span className="workspace-badge">Pages {formatPages(source)}</span>
+        {source.chunk_index !== null && (
+          <span className="workspace-badge">Chunk {source.chunk_index}</span>
+        )}
       </div>
 
       <h3 className="mt-2 font-medium text-neutral-100">
@@ -82,13 +80,23 @@ export function SourceCard({ source, rank }: SourceCardProps) {
         </p>
       )}
 
-      <p className="mt-1 text-xs text-neutral-500">
-        Domains: {(source.domains || []).join(", ") || "N/A"}
-      </p>
+      {Boolean(source.domains?.length) && (
+        <p className="mt-1 text-xs text-neutral-500">
+          Domains: {source.domains?.join(", ")}
+        </p>
+      )}
 
       <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-neutral-300">
         {getPreview(source)}
       </p>
-    </div>
+      {source.document_id && (
+        <Link
+          className="mt-4 inline-block text-sm text-accent underline underline-offset-4"
+          href={`/documents/${encodeURIComponent(source.document_id)}/metadata`}
+        >
+          View document metadata
+        </Link>
+      )}
+    </article>
   );
 }
